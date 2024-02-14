@@ -1,9 +1,10 @@
 {
-  "name": "hardhat-project-template-ts",
+  "name": "contracts",
   "version": "1.0.0",
-  "description": "A fully-fledged Hardhat project template based on TypeScript.",
+  "description": "NFT Box Collection contracts",
   "keywords": [
-    "template",
+    "cryptobottle",
+    "nftcollectionbox",
     "typescript",
     "ethereum",
     "smart-contracts",
@@ -13,13 +14,13 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pcaversaccio/hardhat-project-template-ts.git"
+    "url": "git+https://github.com/Crypto-Bottle/contracts.git"
   },
-  "homepage": "https://github.com/pcaversaccio/hardhat-project-template-ts#readme",
+  "homepage": "https://github.com/Crypto-Bottle/contracts#readme",
   "bugs": {
-    "url": "https://github.com/pcaversaccio/hardhat-project-template-ts/issues"
+    "url": "https://github.com/Crypto-Bottle/contracts/issues"
   },
-  "author": "Pascal Marco Caversaccio <pascal.caversaccio@hotmail.ch>",
+  "author": "Valentin Chmara <valentinchmara@gmail.com>",
   "license": "MIT",
   "scripts": {
     "help": "npx hardhat help",
@@ -129,6 +130,8 @@
     "@nomicfoundation/hardhat-toolbox": "^4.0.0",
     "@nomicfoundation/hardhat-verify": "^2.0.3",
     "@openzeppelin/contracts": "^5.0.1",
+    "@openzeppelin/contracts-upgradeable": "^5.0.1",
+    "@openzeppelin/hardhat-upgrades": "^3.0.2",
     "@tenderly/hardhat-tenderly": "^2.1.0",
     "@truffle/dashboard-hardhat-plugin": "^0.2.15",
     "@typechain/ethers-v6": "^0.5.1",
@@ -155,5 +158,11 @@
     "typescript": "^5.3.3",
     "xdeployer": "^3.0.0",
     "zksync-ethers": "^6.0.0"
+  },
+  "dependencies": {
+    "@chainlink/contracts": "^0.8.0",
+    "@uniswap/v2-periphery": "1.1.0-beta.0",
+    "@uniswap/v3-core": "^1.0.1",
+    "@uniswap/v3-periphery": "^1.4.4"
   }
 }

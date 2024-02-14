@@ -18,6 +18,7 @@ import "hardhat-abi-exporter";
 import "solidity-coverage";
 import "hardhat-contract-sizer";
 import * as tdly from "@tenderly/hardhat-tenderly";
+import "@openzeppelin/hardhat-upgrades";
 
 // Turning off the automatic Tenderly verification
 tdly.setup({ automaticVerifications: false });
