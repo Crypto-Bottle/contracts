@@ -27,6 +27,7 @@ abstract contract CryptoCuvee is
     error InsufficientTokenBalance();
     error CategoryFullyMinted();
     error OwnerOfToken();
+    error WrongCategory();
 
     /**
      * @dev The USDC token address
@@ -61,6 +62,16 @@ abstract contract CryptoCuvee is
         address tokenAddress;
         uint256 quantity;
     }
+
+    /**
+     * @dev The random request data struct
+     */
+    struct RandomRequestData {
+        CategoryType categoryType;
+        uint256 quantity;
+        address to;
+    }
+
     /**
      * @dev The Chainlink VRF coordinator address
      */
@@ -82,7 +93,7 @@ abstract contract CryptoCuvee is
      */
     uint64 private s_subscriptionId;
 
-    mapping(uint256 => CategoryType) private randomnessRequestData;
+    mapping(uint256 => RandomRequestData) private randomnessRequestData;
 
     /**
      * @dev The mapping of all tokenId to CryptoBottle
@@ -96,7 +107,7 @@ abstract contract CryptoCuvee is
 
     /**
      * @dev Mapping to check if a token address is already added to uniqueTokenAddresses
-     */ 
+     */
     mapping(address => bool) private tokenAddressExists;
 
     /**
@@ -104,7 +115,7 @@ abstract contract CryptoCuvee is
      */
     mapping(address => uint256) private totalTokenQuantity;
 
-   /**
+    /**
      * @dev The initialize function for the contract
      * @param _usdc The USDC token address
      * @param _cryptoBottles The CryptoBottles array
@@ -153,7 +164,10 @@ abstract contract CryptoCuvee is
         // For all addresses in uniqueERC20TokenAddresses, check if the sender has enough balance
         for (uint256 i = 0; i < uniqueERC20TokenAddresses.length; i++) {
             address tokenAddress = uniqueERC20TokenAddresses[i];
-            if (IERC20(tokenAddress).balanceOf(address(this)) < totalTokenQuantity[tokenAddress]) {
+            if (
+                IERC20(tokenAddress).balanceOf(address(this)) <
+                totalTokenQuantity[tokenAddress]
+            ) {
                 revert InsufficientTokenBalance();
             }
             // Transfer the tokens to the contract
@@ -172,34 +186,88 @@ abstract contract CryptoCuvee is
 
     /**
      * @dev The function to mintTo an NFT
-     * @param categoryType The category type
+     * @param _to The address to mint to
+     * @param _quantity The quantity to mint
+     * @param _category The category type
      */
-    function mint(address recipient, uint256 quantity, string memory categoryType) public {}
+    function mint(
+        address _to,
+        uint32 _quantity,
+        string memory _category
+    ) public {
+        // Get the category type
+        CategoryType category = _getCategoryType(_category);
+
+        _requestRandomWords(category, _quantity, _to);
+    }
+
+    /**
+     * @dev The function to get the category type
+     * @param _category The category type
+     */
+    function _getCategoryType(
+        string memory _category
+    ) internal pure returns (CategoryType) {
+        if (keccak256(abi.encodePacked(_category)) == keccak256("ROUGE")) {
+            return CategoryType.ROUGE;
+        } else if (
+            keccak256(abi.encodePacked(_category)) == keccak256("BLANC")
+        ) {
+            return CategoryType.BLANC;
+        } else if (
+            keccak256(abi.encodePacked(_category)) == keccak256("ROSE")
+        ) {
+            return CategoryType.ROSE;
+        } else if (
+            keccak256(abi.encodePacked(_category)) == keccak256("CHAMPAGNE")
+        ) {
+            return CategoryType.CHAMPAGNE;
+        }
+        revert WrongCategory();
+    }
 
     /**
      * @dev The function to randomely select one token
-     * @param categoryType The category type
-     * @param randomValue The random value
+     * @param _category The category type
+     * @param _random The random value
+     * @param _to The address to mint to
      */
-    function _invest(CategoryType categoryType, uint256 randomValue) internal {}
+    function _invest(
+        CategoryType _category,
+        uint256 _random,
+        address _to
+    ) internal {
+        CryptoBottle storage cryptoBottle = cryptoBottles[uint256(_category)];
+        // TODO: Implement the logic to select a token based on the random value and the category minted
+    }
 
     /**
      * @dev This function request random VRF words depending on the categoryType and tokenID
      * @param categoryType The category type
+     * @param _quantity The quantity to mint
+     * @param _to The address to mint to
      */
     function _requestRandomWords(
-        CategoryType categoryType
+        CategoryType categoryType,
+        uint32 _quantity,
+        address _to
     ) internal {
         uint256 requestId = coordinator.requestRandomWords(
             keyHash,
             s_subscriptionId,
             requestConfirmations,
             callbackGasLimit,
-            1 // Requesting 1 random value for simplicity
+            _quantity
         );
 
+        RandomRequestData memory randomRequestData = RandomRequestData({
+            categoryType: categoryType,
+            quantity: _quantity,
+            to: _to
+        });
+
         // Store the randomness request data
-        randomnessRequestData[requestId] = categoryType;
+        randomnessRequestData[requestId] = randomRequestData;
     }
 
     /**
@@ -211,12 +279,11 @@ abstract contract CryptoCuvee is
         uint256 requestId,
         uint256[] memory randomWords
     ) internal override {
-        CategoryType requestData = randomnessRequestData[requestId];
+        RandomRequestData memory requestData = randomnessRequestData[requestId];
 
-        // Use `randomWords` and requestData to distribute funds
-        uint256 randomValue = randomWords[0]; // Random value from Chainlink VRF
-
-        _invest(requestData, randomValue);
+        for (uint256 i = 0; i < randomWords.length; i++) {
+            _invest(requestData.categoryType, randomWords[i], requestData.to);
+        }
 
         delete randomnessRequestData[requestId];
     }
