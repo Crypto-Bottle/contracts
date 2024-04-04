@@ -34,11 +34,6 @@ abstract contract CryptoCuvee is
     IERC20 public usdc;
 
     /**
-     * @dev The fill rate, if the fill rate is 100, the contract will invest all the minted funds into crypto currencies for holders
-     */
-    uint256 public fillRate;
-
-    /**
      * @dev The struct for a CryptoBottle
      */
     struct CryptoBottle {
@@ -109,14 +104,19 @@ abstract contract CryptoCuvee is
      */
     mapping(address => uint256) private totalTokenQuantity;
 
-    /**
+   /**
      * @dev The initialize function for the contract
      * @param _usdc The USDC token address
+     * @param _cryptoBottles The CryptoBottles array
+     * @param vrfCoordinator The Chainlink VRF coordinator address
+     * @param _keyHash The key hash for the Chainlink VRF
+     * @param _callbackGasLimit The fee for the Chainlink VRF
+     * @param _requestConfirmations The request confirmations for the Chainlink VRF
+     * @param subscriptionId The subscription ID for the Chainlink VRF
      */
     function initialize(
         IERC20 _usdc,
         CryptoBottle[] memory _cryptoBottles,
-        uint256 _fillRate,
         address vrfCoordinator,
         bytes32 _keyHash,
         uint32 _callbackGasLimit,
@@ -127,7 +127,6 @@ abstract contract CryptoCuvee is
         __Ownable_init(_msgSender());
         __VRFConsumerBaseV2Upgradeable_init(vrfCoordinator);
         usdc = _usdc;
-        fillRate = _fillRate;
 
         // Initialize Chainlink VRF
         coordinator = VRFCoordinatorV2Interface(vrfCoordinator);
@@ -145,14 +144,23 @@ abstract contract CryptoCuvee is
                 if (!tokenAddressExists[token.tokenAddress]) {
                     uniqueERC20TokenAddresses.push(token.tokenAddress);
                     tokenAddressExists[token.tokenAddress] = true;
+                    totalTokenQuantity[token.tokenAddress] = 0;
                 }
+                totalTokenQuantity[token.tokenAddress] += token.quantity;
             }
         }
-        // Revert if the contract is not funded with enough ERC20 tokens
+
+        // For all addresses in uniqueERC20TokenAddresses, check if the sender has enough balance
         for (uint256 i = 0; i < uniqueERC20TokenAddresses.length; i++) {
-            require(
-                usdc.balanceOf(address(this)) >= 1000,
-                "CryptoCuvee: Insufficient token balance"
+            address tokenAddress = uniqueERC20TokenAddresses[i];
+            if (IERC20(tokenAddress).balanceOf(address(this)) < totalTokenQuantity[tokenAddress]) {
+                revert InsufficientTokenBalance();
+            }
+            // Transfer the tokens to the contract
+            IERC20(tokenAddress).transferFrom(
+                _msgSender(),
+                address(this),
+                totalTokenQuantity[tokenAddress]
             );
         }
     }
@@ -163,18 +171,10 @@ abstract contract CryptoCuvee is
     function _authorizeUpgrade(address) internal override onlyOwner {}
 
     /**
-     * @dev The function to update the project rate
-     * @param _fillRate The new project rate
-     */
-    function updatefillRate(uint256 _fillRate) public onlyOwner {
-        fillRate = _fillRate;
-    }
-
-    /**
-     * @dev The function to mint an NFT
+     * @dev The function to mintTo an NFT
      * @param categoryType The category type
      */
-    function mint(string memory categoryType) public {}
+    function mint(address recipient, uint256 quantity, string memory categoryType) public {}
 
     /**
      * @dev The function to randomely select one token
@@ -186,11 +186,9 @@ abstract contract CryptoCuvee is
     /**
      * @dev This function request random VRF words depending on the categoryType and tokenID
      * @param categoryType The category type
-     * @param tokenId The token ID
      */
     function _requestRandomWords(
-        CategoryType categoryType,
-        uint256 tokenId
+        CategoryType categoryType
     ) internal {
         uint256 requestId = coordinator.requestRandomWords(
             keyHash,
