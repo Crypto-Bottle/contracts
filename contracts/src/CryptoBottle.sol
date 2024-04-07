@@ -233,7 +233,7 @@ abstract contract CryptoCuvee is
         address _to,
         uint32 _quantity,
         string memory _category
-    ) public {
+    ) external payable {
         // Only 3 NFTs can be minted per transaction use custom error
         if (_quantity > 3) {
             revert MaxQuantityReached();
@@ -242,11 +242,19 @@ abstract contract CryptoCuvee is
         // Get the category type
         CategoryType category = _getCategoryType(_category);
 
-        if (unclaimedTokensByCategory[
-            category
-        ].length == 0) {
+        if (unclaimedTokensByCategory[category].length == 0) {
             revert CategoryFullyMinted();
         }
+
+        CryptoBottle storage cryptoBottle = cryptoBottles[
+            unclaimedTokensByCategory[category][0]
+        ];
+
+        usdc.transferFrom(
+            _msgSender(),
+            address(this),
+            cryptoBottle.price * _quantity
+        );
 
         _requestRandomWords(category, _quantity, _to);
     }
