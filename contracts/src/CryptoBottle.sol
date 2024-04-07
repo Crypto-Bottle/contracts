@@ -7,6 +7,7 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {ERC721Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import {ERC721EnumerableUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 import {ERC721RoyaltyUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721RoyaltyUpgradeable.sol";
+import {ERC2981Upgradeable} from "@openzeppelin/contracts-upgradeable/token/common/ERC2981Upgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {VRFConsumerBaseV2Upgradeable} from "./VRFConsumerBaseV2Upgradeable.sol";
 import {VRFCoordinatorV2Interface} from "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
@@ -170,7 +171,7 @@ abstract contract CryptoCuvee is
     ) public payable onlyInitializing {
         __ERC721_init("CryptoCuvee", "CCV");
         __ERC721Enumerable_init();
-        __ERC721Royalty_init();
+        __ERC721Royalty_init_unchained();
         __Ownable_init(_msgSender());
         __VRFConsumerBaseV2Upgradeable_init(vrfCoordinator);
         usdc = _usdc;
@@ -219,11 +220,6 @@ abstract contract CryptoCuvee is
     }
 
     /**
-     * @dev The function to upgrade the contract
-     */
-    function _authorizeUpgrade(address) internal override onlyOwner {}
-
-    /**
      * @dev The function to mintTo an NFT
      * @param _to The address to mint to
      * @param _quantity The quantity to mint
@@ -258,6 +254,23 @@ abstract contract CryptoCuvee is
 
         _requestRandomWords(category, _quantity, _to);
     }
+
+    /**
+     * @dev Set default royalty fee
+     * @param _receiver The royalty fee
+     * @param _feeNumerator The royalty fee
+     */
+    function setDefaultRoyalty(
+        address _receiver,
+        uint96 _feeNumerator
+    ) external onlyOwner {
+        _setDefaultRoyalty(_receiver, _feeNumerator);
+    }
+
+    /**
+     * @dev The function to upgrade the contract
+     */
+    function _authorizeUpgrade(address) internal override onlyOwner {}
 
     /**
      * @dev The function to get the category type
