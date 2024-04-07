@@ -30,7 +30,6 @@ abstract contract CryptoCuvee is
      */
     error InsufficientTokenBalance();
     error CategoryFullyMinted();
-    error OwnerOfToken();
     error WrongCategory();
     error MaxQuantityReached();
 
@@ -131,6 +130,11 @@ abstract contract CryptoCuvee is
     mapping(CategoryType => uint256[]) private unclaimedTokensByCategory;
 
     /**
+     * @dev The event for opening a CryptoBottle
+     */
+    event Open(address indexed to, uint256 indexed tokenId);
+
+    /**
      * @dev See {IERC165-supportsInterface}.
      */
     function supportsInterface(
@@ -216,6 +220,24 @@ abstract contract CryptoCuvee is
                 totalTokenQuantity[tokenAddress]
             );
         }
+    }
+
+    /**
+     * @dev Open a crypto bottle and get the tokens inside
+     * @param _tokenId The token ID
+     */
+    function openBottle(uint256 _tokenId) external {
+        _checkAuthorized(ownerOf(_tokenId), _msgSender(), _tokenId);
+
+        uint256 cryptoBottleIndex = tokenToCryptoBottle[_tokenId];
+        CryptoBottle storage cryptoBottle = cryptoBottles[cryptoBottleIndex];
+
+        for (uint256 i = 0; i < cryptoBottle.tokens.length; i++) {
+            Token memory token = cryptoBottle.tokens[i];
+            IERC20(token.tokenAddress).transfer(_msgSender(), token.quantity);
+        }
+
+        emit Open(_msgSender(), _tokenId);
     }
 
     /**
