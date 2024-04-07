@@ -39,6 +39,11 @@ abstract contract CryptoCuvee is
     IERC20 public usdc;
 
     /**
+     * @dev Base URI for computing {tokenURI}
+     */
+    string private baseURI;
+
+    /**
      * @dev The struct for a CryptoBottle
      */
     struct CryptoBottle {
@@ -166,6 +171,7 @@ abstract contract CryptoCuvee is
     function initialize(
         IERC20 _usdc,
         CryptoBottle[] memory _cryptoBottles,
+        string memory _baseURI,
         address vrfCoordinator,
         bytes32 _keyHash,
         uint32 _callbackGasLimit,
@@ -178,7 +184,7 @@ abstract contract CryptoCuvee is
         __Ownable_init(_msgSender());
         __VRFConsumerBaseV2Upgradeable_init(vrfCoordinator);
         usdc = _usdc;
-
+        baseURI = _baseURI;
         // Initialize Chainlink VRF
         coordinator = VRFCoordinatorV2Interface(vrfCoordinator);
         keyHash = _keyHash;
@@ -431,5 +437,19 @@ abstract contract CryptoCuvee is
         uint128 value
     ) internal override(ERC721Upgradeable, ERC721EnumerableUpgradeable) {
         super._increaseBalance(account, value);
+    }
+
+    /**
+     * @dev Base URI for computing {tokenURI}. If set, the resulting URI for each
+     * token will be the concatenation of the `baseURI` and the `tokenId`. Empty
+     * by default, can be overridden in child contracts.
+     */
+    function _baseURI()
+        internal
+        view
+        override(ERC721Upgradeable)
+        returns (string memory)
+    {
+        return baseURI;
     }
 }
