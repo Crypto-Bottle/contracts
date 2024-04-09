@@ -50,26 +50,39 @@ describe("CryptoCuvee", function () {
             }]
         }];
 
+        // Mint some mock tokens for the CryptoBottle
+        await mockBTC.mint(deployerAccount.address, 100n);
+        await mockETH.mint(deployerAccount.address, 100n);
+
         // Prepare CryptoCuvee for deployment
         console.log(mockUSDC.getAddress());
         const CryptoCuveeFactory = await ethers.getContractFactory("CryptoCuvee");
         cryptoCuvee = await upgrades.deployProxy(
             CryptoCuveeFactory as ContractFactory,
-            [
-                await mockUSDC.getAddress(),
-                exampleCryptoBottle,
-                "https://test.com/",
-                systemWalletAccount.address,
-                await mockVRFCoordinator.getAddress(),
-                ethers.keccak256(ethers.toUtf8Bytes("keyHash_example")), // keyHash
-                200000, // callbackGasLimit
-                3, // requestConfirmations
-                1n // subscriptionId, assuming "1" for example
-            ],
-            { initializer: 'initialize' }
+            { initializer: false }
         ) as unknown as CryptoCuvee;
 
         await cryptoCuvee.waitForDeployment();
+
+        // Setup allowance for CryptoCuvee to spend USDC, BTC, and ETH
+        await mockUSDC.approve(await cryptoCuvee.getAddress(), 100n);
+        await mockBTC.approve(await cryptoCuvee.getAddress(), 100n);
+        await mockETH.approve(await cryptoCuvee.getAddress(), 100n);
+
+        // Initialize CryptoCuvee contract
+        await cryptoCuvee.initialize(
+            await mockUSDC.getAddress(),
+            exampleCryptoBottle,
+            "https://test.com/",
+            systemWalletAccount.address,
+            await mockVRFCoordinator.getAddress(),
+            ethers.keccak256(ethers.toUtf8Bytes("keyHash_example")), // keyHash
+            200000, // callbackGasLimit
+            3, // requestConfirmations
+            1n // subscriptionId, assuming "1" for example
+        );
+
+
     });
 
     it("Should mint a CryptoBottle correctly", async function () {
@@ -77,9 +90,8 @@ describe("CryptoCuvee", function () {
         // Assume a mint function exists that requires setting up certain conditions beforehand
         // such as approving USDC spend for the CryptoCuvee contract
 
-        const mintAmount = ethers.parseUnits("10", 18); // Example mint amount
-        await mockUSDC.mint(deployerAccount.address, mintAmount);
-        await mockUSDC.approve(cryptoCuvee.getAddress(), mintAmount);
+        await mockUSDC.mint(deployerAccount.address, 100n);
+        await mockUSDC.approve(await cryptoCuvee.getAddress(), 100n);
 
         // Replace with actual mint function call and parameters
         //await cryptoCuvee.mint(/* parameters for minting */);
