@@ -7,9 +7,10 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {ERC721Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import {ERC721EnumerableUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 import {ERC721RoyaltyUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721RoyaltyUpgradeable.sol";
+import {VRFCoordinatorV2Interface} from "./VRFCoordinatorV2Interface.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {VRFConsumerBaseV2Upgradeable} from "./VRFConsumerBaseV2Upgradeable.sol";
-import {VRFCoordinatorV2Interface} from "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
+
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
@@ -25,11 +26,11 @@ abstract contract CryptoCuvee is
     AccessControlUpgradeable,
     VRFConsumerBaseV2Upgradeable
 {
-
     /**
      * @dev Systel wallet role
      */
-    bytes32 public constant SYSTEM_WALLET_ROLE = keccak256("SYSTEM_WALLET_ROLE");
+    bytes32 public constant SYSTEM_WALLET_ROLE =
+        keccak256("SYSTEM_WALLET_ROLE");
 
     /**
      * @dev Error messages for require statements
@@ -193,7 +194,7 @@ abstract contract CryptoCuvee is
         __VRFConsumerBaseV2Upgradeable_init(vrfCoordinator);
 
         // Init Admin Role
-        _grantRole(DEFAULT_ADMIN_ROLE,  _msgSender());
+        _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
 
         // Init System Wallet Role
         _grantRole(SYSTEM_WALLET_ROLE, systemWallet);
@@ -209,18 +210,33 @@ abstract contract CryptoCuvee is
 
         // Initialize CryptoBottles
         for (uint256 i = 0; i < _cryptoBottles.length; i++) {
-            CryptoBottle memory cryptoBottle = _cryptoBottles[i];
-            cryptoBottles.push(cryptoBottle);
-            for (uint256 j = 0; j < cryptoBottle.tokens.length; j++) {
-                Token memory token = cryptoBottle.tokens[j];
-                if (!tokenAddressExists[token.tokenAddress]) {
-                    uniqueERC20TokenAddresses.push(token.tokenAddress);
-                    tokenAddressExists[token.tokenAddress] = true;
-                    totalTokenQuantity[token.tokenAddress] = 0;
+            cryptoBottles.push();
+            uint256 newIndex = cryptoBottles.length - 1;
+            CryptoBottle storage newBottle = cryptoBottles[newIndex];
+
+            newBottle.categoryType = _cryptoBottles[i].categoryType;
+            newBottle.price = _cryptoBottles[i].price;
+            newBottle.isLinked = _cryptoBottles[i].isLinked;
+
+            // Explicitly copy each Token struct from memory to storage
+            for (uint256 j = 0; j < _cryptoBottles[i].tokens.length; j++) {
+                Token memory memToken = _cryptoBottles[i].tokens[j];
+                newBottle.tokens.push(
+                    Token({
+                        name: memToken.name,
+                        tokenAddress: memToken.tokenAddress,
+                        quantity: memToken.quantity
+                    })
+                );
+
+                if (!tokenAddressExists[memToken.tokenAddress]) {
+                    uniqueERC20TokenAddresses.push(memToken.tokenAddress);
+                    tokenAddressExists[memToken.tokenAddress] = true;
+                    totalTokenQuantity[memToken.tokenAddress] = 0;
                 }
-                totalTokenQuantity[token.tokenAddress] += token.quantity;
-                unclaimedTokensByCategory[cryptoBottle.categoryType].push(
-                    cryptoBottles.length - 1
+                totalTokenQuantity[memToken.tokenAddress] += memToken.quantity;
+                unclaimedTokensByCategory[_cryptoBottles[i].categoryType].push(
+                    i
                 );
             }
         }
@@ -314,7 +330,9 @@ abstract contract CryptoCuvee is
     /**
      * @dev The function to upgrade the contract
      */
-    function _authorizeUpgrade(address) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
+    function _authorizeUpgrade(
+        address
+    ) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
 
     /**
      * @dev The function to get the category type
