@@ -20,7 +20,7 @@ describe("CryptoCuvee", function () {
         const MockERC20Factory = await ethers.getContractFactory("MockERC20");
         mockUSDC = await MockERC20Factory.deploy("Mock USDC", "mUSDC");
         await mockUSDC.waitForDeployment();
-        
+
         // Deploy mock BTC
         mockBTC = await MockERC20Factory.deploy("Mock BTC", "mBTC");
         await mockBTC.waitForDeployment();
@@ -39,32 +39,33 @@ describe("CryptoCuvee", function () {
             price: ethers.parseEther("1"), // Price set to 1 ETH equivalent in USDC for example
             isLinked: false,
             tokens: [{
-              name: "mBTC",
-              tokenAddress: mockBTC.getAddress(),
-              quantity: 3n
+                name: "mBTC",
+                tokenAddress: await mockBTC.getAddress(),
+                quantity: 3n
             },
             {
                 name: "mETH",
-                tokenAddress: mockETH.getAddress(),
+                tokenAddress: await mockETH.getAddress(),
                 quantity: 7n
             }]
-          }];
+        }];
 
         // Prepare CryptoCuvee for deployment
+        console.log(mockUSDC.getAddress());
         const CryptoCuveeFactory = await ethers.getContractFactory("CryptoCuvee");
         cryptoCuvee = await upgrades.deployProxy(
             CryptoCuveeFactory as ContractFactory,
             [
-                mockUSDC.getAddress(),
+                await mockUSDC.getAddress(),
                 exampleCryptoBottle,
                 "https://test.com/",
                 systemWalletAccount.address,
-                mockVRFCoordinator.getAddress(),
+                await mockVRFCoordinator.getAddress(),
                 ethers.keccak256(ethers.toUtf8Bytes("keyHash_example")), // keyHash
                 200000, // callbackGasLimit
                 3, // requestConfirmations
                 1n // subscriptionId, assuming "1" for example
-              ],
+            ],
             { initializer: 'initialize' }
         ) as unknown as CryptoCuvee;
 

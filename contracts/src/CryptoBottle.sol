@@ -99,11 +99,11 @@ contract CryptoCuvee is
     /**
      * @dev The fee for the Chainlink VRF
      */
-    uint32 private callbackGasLimit = 200000; // Adjust the gas limit based on your callback function
+    uint32 private callbackGasLimit; // Adjust the gas limit based on your callback function
     /**
      * @dev Request confirmations for the Chainlink VRF
      */
-    uint16 private requestConfirmations = 3;
+    uint16 private requestConfirmations;
     /**
      * @dev The subscription ID for the Chainlink VRF
      */
@@ -186,7 +186,7 @@ contract CryptoCuvee is
         uint32 _callbackGasLimit,
         uint16 _requestConfirmations,
         uint64 subscriptionId
-    ) public payable onlyInitializing {
+    ) public payable initializer {
         __ERC721_init("CryptoCuvee", "CCV");
         __ERC721Enumerable_init();
         __ERC721Royalty_init();
