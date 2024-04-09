@@ -7,7 +7,7 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {ERC721Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import {ERC721EnumerableUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 import {ERC721RoyaltyUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721RoyaltyUpgradeable.sol";
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {VRFConsumerBaseV2Upgradeable} from "./VRFConsumerBaseV2Upgradeable.sol";
 import {VRFCoordinatorV2Interface} from "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -22,9 +22,15 @@ abstract contract CryptoCuvee is
     ERC721Upgradeable,
     ERC721EnumerableUpgradeable,
     ERC721RoyaltyUpgradeable,
-    OwnableUpgradeable,
+    AccessControlUpgradeable,
     VRFConsumerBaseV2Upgradeable
 {
+
+    /**
+     * @dev Systel wallet role
+     */
+    bytes32 public constant SYSTEM_WALLET_ROLE = keccak256("SYSTEM_WALLET_ROLE");
+
     /**
      * @dev Error messages for require statements
      */
@@ -151,7 +157,8 @@ abstract contract CryptoCuvee is
         override(
             ERC721Upgradeable,
             ERC721EnumerableUpgradeable,
-            ERC721RoyaltyUpgradeable
+            ERC721RoyaltyUpgradeable,
+            AccessControlUpgradeable
         )
         returns (bool)
     {
@@ -171,7 +178,8 @@ abstract contract CryptoCuvee is
     function initialize(
         IERC20 _usdc,
         CryptoBottle[] memory _cryptoBottles,
-        string memory _baseURI,
+        string memory _baseUri,
+        address systemWallet,
         address vrfCoordinator,
         bytes32 _keyHash,
         uint32 _callbackGasLimit,
@@ -180,11 +188,18 @@ abstract contract CryptoCuvee is
     ) public payable onlyInitializing {
         __ERC721_init("CryptoCuvee", "CCV");
         __ERC721Enumerable_init();
-        __ERC721Royalty_init_unchained();
-        __Ownable_init(_msgSender());
+        __ERC721Royalty_init();
+        __AccessControl_init();
         __VRFConsumerBaseV2Upgradeable_init(vrfCoordinator);
+
+        // Init Admin Role
+        _grantRole(DEFAULT_ADMIN_ROLE,  _msgSender());
+
+        // Init System Wallet Role
+        _grantRole(SYSTEM_WALLET_ROLE, systemWallet);
+
         usdc = _usdc;
-        baseURI = _baseURI;
+        baseURI = _baseUri;
         // Initialize Chainlink VRF
         coordinator = VRFCoordinatorV2Interface(vrfCoordinator);
         keyHash = _keyHash;
@@ -273,11 +288,13 @@ abstract contract CryptoCuvee is
             unclaimedTokensByCategory[category][0]
         ];
 
-        usdc.transferFrom(
-            _msgSender(),
-            address(this),
-            cryptoBottle.price * _quantity
-        );
+        if (!hasRole(SYSTEM_WALLET_ROLE, _msgSender())) {
+            usdc.transferFrom(
+                _msgSender(),
+                address(this),
+                cryptoBottle.price * _quantity
+            );
+        }
 
         _requestRandomWords(category, _quantity, _to);
     }
@@ -290,14 +307,14 @@ abstract contract CryptoCuvee is
     function setDefaultRoyalty(
         address _receiver,
         uint96 _feeNumerator
-    ) external onlyOwner {
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _setDefaultRoyalty(_receiver, _feeNumerator);
     }
 
     /**
      * @dev The function to upgrade the contract
      */
-    function _authorizeUpgrade(address) internal override onlyOwner {}
+    function _authorizeUpgrade(address) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
 
     /**
      * @dev The function to get the category type
