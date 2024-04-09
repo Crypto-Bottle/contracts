@@ -1,0 +1,3 @@
+[
+  "function requestRandomWords(bytes32,uint64,uint16,uint32,uint32) pure returns (uint256)"
+]

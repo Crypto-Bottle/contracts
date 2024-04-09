@@ -1,0 +1,12 @@
+[
+  "function acceptSubscriptionOwnerTransfer(uint64)",
+  "function addConsumer(uint64,address)",
+  "function cancelSubscription(uint64,address)",
+  "function createSubscription() returns (uint64)",
+  "function getRequestConfig() view returns (uint16, uint32, bytes32[])",
+  "function getSubscription(uint64) view returns (uint96, uint64, address, address[])",
+  "function pendingRequestExists(uint64) view returns (bool)",
+  "function removeConsumer(uint64,address)",
+  "function requestRandomWords(bytes32,uint64,uint16,uint32,uint32) returns (uint256)",
+  "function requestSubscriptionOwnerTransfer(uint64,address)"
+]

@@ -17,7 +17,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  * @title CryptoCuvee
  * @dev The CryptoCuvee contract is an UUPS upgradeable contract that allows users to mint NFTs which will vault a percentage of the minting price into crypto currencies.
  */
-abstract contract CryptoCuvee is
+contract CryptoCuvee is
     Initializable,
     UUPSUpgradeable,
     ERC721Upgradeable,
