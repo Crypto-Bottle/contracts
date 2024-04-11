@@ -35,7 +35,7 @@ contract CryptoCuvee is
     /**
      * @dev Error messages for require statements
      */
-    error InsufficientTokenBalance();
+    error InsufficientTokenBalance(address tokenAddress, uint256 tokenBalance);
     error CategoryFullyMinted();
     error WrongCategory();
     error MaxQuantityReached();
@@ -244,11 +244,11 @@ contract CryptoCuvee is
         // For all addresses in uniqueERC20TokenAddresses, check if the sender has enough balance
         for (uint256 i = 0; i < uniqueERC20TokenAddresses.length; i++) {
             address tokenAddress = uniqueERC20TokenAddresses[i];
-            if (
-                IERC20(tokenAddress).balanceOf(address(this)) <
-                totalTokenQuantity[tokenAddress]
-            ) {
-                revert InsufficientTokenBalance();
+            uint256 tokenBalance = IERC20(tokenAddress).balanceOf(
+                _msgSender()
+            );
+            if (tokenBalance < totalTokenQuantity[tokenAddress]) {
+                revert InsufficientTokenBalance(tokenAddress, tokenBalance);
             }
             // Transfer the tokens to the contract
             IERC20(tokenAddress).transferFrom(

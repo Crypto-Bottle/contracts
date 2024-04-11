@@ -55,7 +55,7 @@ describe("CryptoCuvee", function () {
         await mockETH.mint(deployerAccount.address, 100n);
 
         // Prepare CryptoCuvee for deployment
-        console.log(mockUSDC.getAddress());
+        console.log(await mockUSDC.getAddress());
         const CryptoCuveeFactory = await ethers.getContractFactory("CryptoCuvee");
         cryptoCuvee = await upgrades.deployProxy(
             CryptoCuveeFactory as ContractFactory,

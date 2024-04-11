@@ -20,7 +20,7 @@
   "error ERC721NonexistentToken(uint256)",
   "error ERC721OutOfBoundsIndex(address,uint256)",
   "error FailedInnerCall()",
-  "error InsufficientTokenBalance()",
+  "error InsufficientTokenBalance(address,uint256)",
   "error InvalidInitialization()",
   "error MaxQuantityReached()",
   "error NotInitializing()",
