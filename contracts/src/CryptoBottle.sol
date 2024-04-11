@@ -142,9 +142,18 @@ contract CryptoCuvee is
     mapping(CategoryType => uint256[]) private unclaimedTokensByCategory;
 
     /**
-     * @dev The event for opening a CryptoBottle
+     * @dev The CryptoBottle's open event
      */
-    event Open(address indexed to, uint256 indexed tokenId);
+    event CryptoBottleOpen(address indexed to, uint256 indexed tokenId);
+
+    /**
+     * @dev The CryptoBottle's created event
+     */
+    event CryptoBottleCreated(
+        address indexed to,
+        uint256 indexed tokenId,
+        uint256 cryptoBottleIndex
+    );
 
     /**
      * @dev See {IERC165-supportsInterface}.
@@ -244,9 +253,7 @@ contract CryptoCuvee is
         // For all addresses in uniqueERC20TokenAddresses, check if the sender has enough balance
         for (uint256 i = 0; i < uniqueERC20TokenAddresses.length; i++) {
             address tokenAddress = uniqueERC20TokenAddresses[i];
-            uint256 tokenBalance = IERC20(tokenAddress).balanceOf(
-                _msgSender()
-            );
+            uint256 tokenBalance = IERC20(tokenAddress).balanceOf(_msgSender());
             if (tokenBalance < totalTokenQuantity[tokenAddress]) {
                 revert InsufficientTokenBalance(tokenAddress, tokenBalance);
             }
@@ -274,7 +281,7 @@ contract CryptoCuvee is
             IERC20(token.tokenAddress).transfer(_msgSender(), token.quantity);
         }
 
-        emit Open(_msgSender(), _tokenId);
+        emit CryptoBottleOpen(_msgSender(), _tokenId);
     }
 
     /**
@@ -286,15 +293,19 @@ contract CryptoCuvee is
     function mint(
         address _to,
         uint32 _quantity,
-        string memory _category
+        CategoryType _category
     ) external payable {
         // Only 3 NFTs can be minted per transaction use custom error
         if (_quantity > 3) {
             revert MaxQuantityReached();
         }
 
+        if (_category > CategoryType.CHAMPAGNE) {
+            revert WrongCategory();
+        }
+
         // Get the category type
-        CategoryType category = _getCategoryType(_category);
+        CategoryType category = _category;
 
         if (unclaimedTokensByCategory[category].length == 0) {
             revert CategoryFullyMinted();
@@ -335,31 +346,6 @@ contract CryptoCuvee is
     ) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
 
     /**
-     * @dev The function to get the category type
-     * @param _category The category type
-     */
-    function _getCategoryType(
-        string memory _category
-    ) internal pure returns (CategoryType) {
-        if (keccak256(abi.encodePacked(_category)) == keccak256("ROUGE")) {
-            return CategoryType.ROUGE;
-        } else if (
-            keccak256(abi.encodePacked(_category)) == keccak256("BLANC")
-        ) {
-            return CategoryType.BLANC;
-        } else if (
-            keccak256(abi.encodePacked(_category)) == keccak256("ROSE")
-        ) {
-            return CategoryType.ROSE;
-        } else if (
-            keccak256(abi.encodePacked(_category)) == keccak256("CHAMPAGNE")
-        ) {
-            return CategoryType.CHAMPAGNE;
-        }
-        revert WrongCategory();
-    }
-
-    /**
      * @dev The function to randomely select one token
      * @param _category The category type
      * @param _random The random value
@@ -389,6 +375,9 @@ contract CryptoCuvee is
         // Mint the NFT
         _safeMint(_to, tokenId);
         tokenToCryptoBottle[tokenId] = selectedTokenId;
+
+        // Emit CryptoBottleCreated event
+        emit CryptoBottleCreated(_to, tokenId, selectedTokenId);
     }
 
     /**
@@ -463,7 +452,7 @@ contract CryptoCuvee is
     }
 
     /**
-     * @dev Overrid _increaseBalance function from ERC721RoyaltyUpgradeable
+     * @dev Override _increaseBalance function from ERC721RoyaltyUpgradeable
      * @param account The account to increase the balance
      * @param value The value to increase
      */
