@@ -4,10 +4,10 @@ pragma abicoder v2;
 
 contract MockVRFCoordinator {
     function requestRandomWords(
-        bytes32, /* _keyHash */
-        uint64, /* _subscriptionId */
-        uint16, /* _requestConfirmations */
-        uint32, /* _callbackGasLimit */
+        bytes32 /* _keyHash */,
+        uint64 /* _subscriptionId */,
+        uint16 /* _requestConfirmations */,
+        uint32 /* _callbackGasLimit */,
         uint32 /* _numWords */
     ) external pure returns (uint256 requestId) {
         // This mock function simply returns a requestId of 1 for simplicity

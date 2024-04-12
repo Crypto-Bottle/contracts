@@ -80,7 +80,7 @@ const config: HardhatUserConfig = {
         enabled: true,
         runs: 999_999,
       },
-      viaIR: true, 
+      viaIR: true,
       evmVersion: "paris", // Prevent using the `PUSH0` opcode
     },
   },
