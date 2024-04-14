@@ -10,8 +10,8 @@ import {ERC721RoyaltyUpgradeable} from "@openzeppelin/contracts-upgradeable/toke
 import {VRFCoordinatorV2Interface} from "./VRFCoordinatorV2Interface.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {VRFConsumerBaseV2Upgradeable} from "./VRFConsumerBaseV2Upgradeable.sol";
-
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {console} from "hardhat/console.sol";
 
 /**
  * @title CryptoCuvee
@@ -36,7 +36,6 @@ contract CryptoCuvee is
      */
     error InsufficientTokenBalance(address tokenAddress, uint256 tokenBalance);
     error CategoryFullyMinted();
-    error WrongCategory();
     error MaxQuantityReached();
 
     /**
@@ -276,24 +275,17 @@ contract CryptoCuvee is
             revert MaxQuantityReached();
         }
 
-        if (_category > CategoryType.CHAMPAGNE) {
-            revert WrongCategory();
-        }
-
-        // Get the category type
-        CategoryType category = _category;
-
-        if (unclaimedTokensByCategory[category].length == 0) {
+        if (unclaimedTokensByCategory[_category].length == 0) {
             revert CategoryFullyMinted();
         }
 
-        CryptoBottle storage cryptoBottle = cryptoBottles[unclaimedTokensByCategory[category][0]];
+        CryptoBottle storage cryptoBottle = cryptoBottles[unclaimedTokensByCategory[_category][0]];
 
         if (!hasRole(SYSTEM_WALLET_ROLE, _msgSender())) {
             usdc.transferFrom(_msgSender(), address(this), cryptoBottle.price * _quantity);
         }
 
-        _requestRandomWords(category, _quantity, _to);
+        _requestRandomWords(_category, _quantity, _to);
     }
 
     /**

@@ -27,7 +27,6 @@
   "error OnlyCoordinatorCanFulfill(address,address)",
   "error UUPSUnauthorizedCallContext()",
   "error UUPSUnsupportedProxiableUUID(bytes32)",
-  "error WrongCategory()",
   "event Approval(address indexed,address indexed,uint256 indexed)",
   "event ApprovalForAll(address indexed,address indexed,bool)",
   "event CryptoBottleCreated(address indexed,uint256 indexed,uint256)",

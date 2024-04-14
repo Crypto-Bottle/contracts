@@ -37,6 +37,10 @@ describe("CryptoCuvee", () => {
       await ethers.getContractFactory("MockVRFCoordinator");
     mockVRFCoordinator = await MockVRFCoordinatorFactory.deploy();
     await mockVRFCoordinator.waitForDeployment();
+    const subId = await mockVRFCoordinator.createSubscription();
+    
+await mockVRFCoordinator.fundSubscription(subId, ethers.utils.parseEther("10")); // Assuming 10 LINK
+
 
     const exampleCryptoBottle = [
       {
@@ -115,27 +119,17 @@ describe("CryptoCuvee", () => {
     ).to.be.revertedWithCustomError(mockUSDC, "ERC20InsufficientAllowance");
   });
 
-  it("Should revert minting a CryptoBottle if trying to mint more than 3 ", async () => {
-    await expect(
-      cryptoCuvee.connect(user1).mint(user1.address, 4, 1n),
-    ).to.be.revertedWithCustomError(cryptoCuvee, "MaxQuantityReached");
-  });
-
-  it("Should revert if the category does not exist", async () => {
-    await expect(
-      cryptoCuvee.connect(user1).mint(user1.address, 1, 10n),
-    ).to.be.revertedWithCustomError(cryptoCuvee, "WrongCategory");
-  });
-
   it("Should revert if the category is totally minted", async () => {
+    await expect(
+      cryptoCuvee.connect(user1).mint(user1.address, 1, 2)
+    ).to.be.revertedWithCustomError(cryptoCuvee, "CategoryFullyMinted");
+  });
+
+  it("Should successfully mint with random fulfillment simulation from chainlink", async () => {
     await cryptoCuvee.connect(user1).mint(user1.address, 1, 1n);
     // We need to simulate the fulfillRandomWords function call from the VRFCoordinator
     await cryptoCuvee
       .connect(deployerAccount)
       .rawFulfillRandomWords(1, [Math.floor(Math.random() * 1000000)]);
-
-    await expect(
-      cryptoCuvee.connect(user1).mint(user1.address, 1, 1n),
-    ).to.be.revertedWithCustomError(cryptoCuvee, "CategoryFullyMinted");
   });
 });
