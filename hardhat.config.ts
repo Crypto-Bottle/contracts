@@ -60,8 +60,8 @@ task(
     for (const account of accounts) {
       console.log(
         account.address +
-          " " +
-          (await hre.ethers.provider.getBalance(account.address)),
+        " " +
+        (await hre.ethers.provider.getBalance(account.address)),
       );
     }
   },
@@ -72,17 +72,30 @@ const config: HardhatUserConfig = {
     sources: "./contracts/src",
   },
   solidity: {
-    // Only use Solidity default versions `>=0.8.20` for EVM networks that support the opcode `PUSH0`
-    // Otherwise, use the versions `<=0.8.19`
-    version: "0.8.23",
-    settings: {
-      optimizer: {
-        enabled: true,
-        runs: 999_999,
+    compilers: [
+      {
+        version: "0.8.23",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 999_999
+          },
+          viaIR: true,
+          evmVersion: "paris" // Ensure this is compatible with the features used in your contracts
+        }
       },
-      viaIR: true,
-      evmVersion: "paris", // Prevent using the `PUSH0` opcode
-    },
+      {
+        version: "0.8.6",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200 // You might want to adjust this based on the specific needs of the dependencies
+          },
+          viaIR: true,
+          evmVersion: "paris" // Match the EVM version if required by your dependencies
+        }
+      }
+    ]
   },
   zksolc: {
     version: "1.3.22",

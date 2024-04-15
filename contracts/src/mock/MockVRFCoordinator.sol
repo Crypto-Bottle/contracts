@@ -15,14 +15,6 @@ contract VRFCoordinatorV2Mock is VRFCoordinatorV2Interface, ConfirmedOwner {
   uint96 public immutable GAS_PRICE_LINK;
   uint16 public immutable MAX_CONSUMERS = 100;
 
-  error InvalidSubscription();
-  error InsufficientBalance();
-  error MustBeSubOwner(address owner);
-  error TooManyConsumers();
-  error InvalidConsumer();
-  error InvalidRandomWords();
-  error Reentrant();
-
   event RandomWordsRequested(
     bytes32 indexed keyHash,
     uint256 requestId,

@@ -2,6 +2,14 @@
 pragma solidity ^0.8.0;
 
 interface VRFCoordinatorV2Interface {
+    error InvalidSubscription();
+    error InsufficientBalance();
+    error MustBeSubOwner(address owner);
+    error TooManyConsumers();
+    error InvalidConsumer();
+    error InvalidRandomWords();
+    error Reentrant();
+
     /**
      * @notice Get configuration relevant for making requests
      * @return minimumRequestConfirmations global min for request confirmations

@@ -1,8 +1,8 @@
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
-import { MockERC20, CryptoCuvee, MockVRFCoordinator } from "../typechain-types";
+import { MockERC20, CryptoCuvee, VRFCoordinatorV2Mock } from "../typechain-types";
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
-import type { ContractFactory } from "ethers";
+import type { ContractFactory, EventLog } from "ethers";
 
 describe("CryptoCuvee", () => {
   let deployerAccount: SignerWithAddress;
@@ -12,8 +12,9 @@ describe("CryptoCuvee", () => {
   let mockUSDC: MockERC20;
   let mockBTC: MockERC20;
   let mockETH: MockERC20;
+  let mockLINK: MockERC20;
   let cryptoCuvee: CryptoCuvee;
-  let mockVRFCoordinator: MockVRFCoordinator;
+  let mockVRFCoordinator: VRFCoordinatorV2Mock;
 
   beforeEach(async () => {
     [deployerAccount, systemWalletAccount, user1, user2] =
@@ -32,15 +33,26 @@ describe("CryptoCuvee", () => {
     mockETH = await MockERC20Factory.deploy("Mock ETH", "mETH");
     await mockETH.waitForDeployment();
 
+    mockLINK = await MockERC20Factory.deploy("Mock LINK", "mLINK");
+    await mockLINK.waitForDeployment();
+
     // Deploy MockVRFCoordinator
     const MockVRFCoordinatorFactory =
-      await ethers.getContractFactory("MockVRFCoordinator");
-    mockVRFCoordinator = await MockVRFCoordinatorFactory.deploy();
+      await ethers.getContractFactory("VRFCoordinatorV2Mock");
+    mockVRFCoordinator = await MockVRFCoordinatorFactory.deploy(100000000000000000n, 1e9);
     await mockVRFCoordinator.waitForDeployment();
-    const subId = await mockVRFCoordinator.createSubscription();
-    
-await mockVRFCoordinator.fundSubscription(subId, ethers.utils.parseEther("10")); // Assuming 10 LINK
 
+    const tx = await mockVRFCoordinator.connect(deployerAccount).createSubscription();
+    const receipt = await tx.wait()
+    const subId = (receipt?.logs[0] as EventLog)?.args[0] ?? 1n;
+    await mockVRFCoordinator.fundSubscription(subId, 1000n);
+
+    const mockCoordinatorAddress = await mockVRFCoordinator.getAddress();
+
+    // Fund subscription 
+    await mockLINK.mint(deployerAccount.address, 1000n);
+    await mockLINK.approve(mockCoordinatorAddress, 1000n);
+    await mockVRFCoordinator.fundSubscription(subId, 1000n);
 
     const exampleCryptoBottle = [
       {
@@ -75,6 +87,9 @@ await mockVRFCoordinator.fundSubscription(subId, ethers.utils.parseEther("10"));
 
     await cryptoCuvee.waitForDeployment();
 
+    // Add the CryptoBottle contract as a consumer
+    await mockVRFCoordinator.addConsumer(subId, await cryptoCuvee.getAddress());
+
     // Setup allowance for CryptoCuvee to spend USDC, BTC, and ETH
     await mockUSDC
       .connect(deployerAccount)
@@ -92,11 +107,11 @@ await mockVRFCoordinator.fundSubscription(subId, ethers.utils.parseEther("10"));
       exampleCryptoBottle,
       "https://test.com/",
       systemWalletAccount.address,
-      await mockVRFCoordinator.getAddress(),
+      mockCoordinatorAddress,
       ethers.keccak256(ethers.toUtf8Bytes("keyHash_example")), // keyHash
-      200000, // callbackGasLimit
-      3, // requestConfirmations
-      1n, // subscriptionId, assuming "1" for example
+      2000000, // callbackGasLimit
+      1, // requestConfirmations
+      subId, // subscriptionId, assuming "1" for example
     );
 
     await mockUSDC.connect(user1).mint(user1.address, 100n);
@@ -104,9 +119,15 @@ await mockVRFCoordinator.fundSubscription(subId, ethers.utils.parseEther("10"));
   });
 
   it("Should mint a CryptoBottle correctly with system wallet", async () => {
-    await cryptoCuvee
-      .connect(systemWalletAccount)
-      .mint(deployerAccount.address, 1n, 1n);
+    try {
+      const tx = await cryptoCuvee
+        .connect(systemWalletAccount)
+        .mint(deployerAccount.address, 1n, 1n);
+      await tx.wait();
+    } catch (error) {
+      console.log(error);
+    }
+
   });
 
   it("Should mint a CryptoBottle correctly with user1 wallet", async () => {

@@ -1,4 +1,11 @@
 [
+  "error InsufficientBalance()",
+  "error InvalidConsumer()",
+  "error InvalidRandomWords()",
+  "error InvalidSubscription()",
+  "error MustBeSubOwner(address)",
+  "error Reentrant()",
+  "error TooManyConsumers()",
   "function acceptSubscriptionOwnerTransfer(uint64)",
   "function addConsumer(uint64,address)",
   "function cancelSubscription(uint64,address)",
