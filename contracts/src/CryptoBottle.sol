@@ -349,7 +349,7 @@ contract CryptoCuvee is
             quantity: _quantity,
             to: _to
         });
-
+        //console.log("Request ID: %d", requestId);
         // Store the randomness request data
         randomnessRequestData[requestId] = randomRequestData;
     }

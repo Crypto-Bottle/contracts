@@ -38,8 +38,8 @@ describe("CryptoCuvee", () => {
 
     // Deploy MockVRFCoordinator
     const MockVRFCoordinatorFactory =
-      await ethers.getContractFactory("VRFCoordinatorV2Mock");
-    mockVRFCoordinator = await MockVRFCoordinatorFactory.deploy(100000000000000000n, 1e9);
+    await ethers.getContractFactory("VRFCoordinatorV2Mock");
+    mockVRFCoordinator = await MockVRFCoordinatorFactory.deploy(1n, 1n);
     await mockVRFCoordinator.waitForDeployment();
 
     const tx = await mockVRFCoordinator.connect(deployerAccount).createSubscription();
@@ -50,9 +50,9 @@ describe("CryptoCuvee", () => {
     const mockCoordinatorAddress = await mockVRFCoordinator.getAddress();
 
     // Fund subscription 
-    await mockLINK.mint(deployerAccount.address, 1000n);
-    await mockLINK.approve(mockCoordinatorAddress, 1000n);
-    await mockVRFCoordinator.fundSubscription(subId, 1000n);
+    await mockLINK.mint(deployerAccount.address, 100_000_000n);
+    await mockLINK.approve(mockCoordinatorAddress, 100_000_000n);
+    await mockVRFCoordinator.fundSubscription(subId, 100_000_000n);
 
     const exampleCryptoBottle = [
       {
@@ -146,11 +146,16 @@ describe("CryptoCuvee", () => {
     ).to.be.revertedWithCustomError(cryptoCuvee, "CategoryFullyMinted");
   });
 
+  it("Should check the funding balance of the subscription", async () => {
+    const subId = 1;
+    const subscription = await mockVRFCoordinator.getSubscription(subId);
+    const [balance, , , ] = subscription;
+    expect(balance).to.equal(100_001_000n);
+  });
+
   it("Should successfully mint with random fulfillment simulation from chainlink", async () => {
     await cryptoCuvee.connect(user1).mint(user1.address, 1, 1n);
     // We need to simulate the fulfillRandomWords function call from the VRFCoordinator
-    await cryptoCuvee
-      .connect(deployerAccount)
-      .rawFulfillRandomWords(1, [Math.floor(Math.random() * 1000000)]);
+    await mockVRFCoordinator.fulfillRandomWords(1n, await cryptoCuvee.getAddress()); 
   });
 });
