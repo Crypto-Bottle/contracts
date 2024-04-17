@@ -4,7 +4,7 @@ src = 'contracts/src'                                         # the source direc
 test = 'contracts/test'                                       # the test directory
 out = 'forge-artifacts'                                       # the output directory (for artifacts)
 libs = ['contracts/lib']                                      # a list of library directories
-remappings = ["@chainlink=contracts/lib/chainlink-brownie-contracts/"]                                               # a list of remappings
+remappings = []                                               # a list of remappings
 libraries = []                                                # a list of deployed libraries to link against
 cache = true                                                  # whether to cache builds or not
 cache_path = 'cache'                                          # where the cache is stored if enabled
