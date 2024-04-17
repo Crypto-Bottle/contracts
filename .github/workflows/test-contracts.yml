@@ -138,7 +138,7 @@ jobs:
           FOUNDRY_PROFILE: default
 
       - name: Run coverage
-        run: NO_COLOR=1 forge coverage --report summary --report lcov >> $GITHUB_STEP_SUMMARY
+        run: NO_COLOR=1 forge coverage --report summary --ir-minimum --report lcov >> $GITHUB_STEP_SUMMARY
         env:
           FOUNDRY_PROFILE: default
 
