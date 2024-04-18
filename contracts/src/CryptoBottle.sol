@@ -10,14 +10,14 @@ import {ERC721RoyaltyUpgradeable} from "@openzeppelin/contracts-upgradeable/toke
 import {VRFCoordinatorV2Interface} from "./VRFCoordinatorV2Interface.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {VRFConsumerBaseV2Upgradeable} from "./VRFConsumerBaseV2Upgradeable.sol";
-
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {console} from "hardhat/console.sol";
 
 /**
  * @title CryptoCuvee
  * @dev The CryptoCuvee contract is an UUPS upgradeable contract that allows users to mint NFTs which will vault a percentage of the minting price into crypto currencies.
  */
-abstract contract CryptoCuvee is
+contract CryptoCuvee is
     Initializable,
     UUPSUpgradeable,
     ERC721Upgradeable,
@@ -29,15 +29,13 @@ abstract contract CryptoCuvee is
     /**
      * @dev Systel wallet role
      */
-    bytes32 public constant SYSTEM_WALLET_ROLE =
-        keccak256("SYSTEM_WALLET_ROLE");
+    bytes32 public constant SYSTEM_WALLET_ROLE = keccak256("SYSTEM_WALLET_ROLE");
 
     /**
      * @dev Error messages for require statements
      */
-    error InsufficientTokenBalance();
+    error InsufficientTokenBalance(address tokenAddress, uint256 tokenBalance);
     error CategoryFullyMinted();
-    error WrongCategory();
     error MaxQuantityReached();
 
     /**
@@ -99,11 +97,11 @@ abstract contract CryptoCuvee is
     /**
      * @dev The fee for the Chainlink VRF
      */
-    uint32 private callbackGasLimit = 200000; // Adjust the gas limit based on your callback function
+    uint32 private callbackGasLimit; // Adjust the gas limit based on your callback function
     /**
      * @dev Request confirmations for the Chainlink VRF
      */
-    uint16 private requestConfirmations = 3;
+    uint16 private requestConfirmations;
     /**
      * @dev The subscription ID for the Chainlink VRF
      */
@@ -139,12 +137,17 @@ abstract contract CryptoCuvee is
     /**
      * @dev Unclaimed tokens by category
      */
-    mapping(CategoryType => uint256[]) private unclaimedTokensByCategory;
+    mapping(CategoryType => uint256[]) private unclaimedBottlesByCategory;
 
     /**
-     * @dev The event for opening a CryptoBottle
+     * @dev The CryptoBottle's open event
      */
-    event Open(address indexed to, uint256 indexed tokenId);
+    event CryptoBottleOpen(address indexed to, uint256 indexed tokenId);
+
+    /**
+     * @dev The CryptoBottle's created event
+     */
+    event CryptoBottleCreated(address indexed to, uint256 indexed tokenId, uint256 cryptoBottleIndex);
 
     /**
      * @dev See {IERC165-supportsInterface}.
@@ -155,12 +158,7 @@ abstract contract CryptoCuvee is
         public
         view
         virtual
-        override(
-            ERC721Upgradeable,
-            ERC721EnumerableUpgradeable,
-            ERC721RoyaltyUpgradeable,
-            AccessControlUpgradeable
-        )
+        override(ERC721Upgradeable, ERC721EnumerableUpgradeable, ERC721RoyaltyUpgradeable, AccessControlUpgradeable)
         returns (bool)
     {
         return super.supportsInterface(interfaceId);
@@ -186,11 +184,8 @@ abstract contract CryptoCuvee is
         uint32 _callbackGasLimit,
         uint16 _requestConfirmations,
         uint64 subscriptionId
-    ) public payable onlyInitializing {
+    ) public payable initializer {
         __ERC721_init("CryptoCuvee", "CCV");
-        __ERC721Enumerable_init();
-        __ERC721Royalty_init();
-        __AccessControl_init();
         __VRFConsumerBaseV2Upgradeable_init(vrfCoordinator);
 
         // Init Admin Role
@@ -222,11 +217,7 @@ abstract contract CryptoCuvee is
             for (uint256 j = 0; j < _cryptoBottles[i].tokens.length; j++) {
                 Token memory memToken = _cryptoBottles[i].tokens[j];
                 newBottle.tokens.push(
-                    Token({
-                        name: memToken.name,
-                        tokenAddress: memToken.tokenAddress,
-                        quantity: memToken.quantity
-                    })
+                    Token({name: memToken.name, tokenAddress: memToken.tokenAddress, quantity: memToken.quantity})
                 );
 
                 if (!tokenAddressExists[memToken.tokenAddress]) {
@@ -235,27 +226,19 @@ abstract contract CryptoCuvee is
                     totalTokenQuantity[memToken.tokenAddress] = 0;
                 }
                 totalTokenQuantity[memToken.tokenAddress] += memToken.quantity;
-                unclaimedTokensByCategory[_cryptoBottles[i].categoryType].push(
-                    i
-                );
             }
+            unclaimedBottlesByCategory[_cryptoBottles[i].categoryType].push(i);
         }
 
         // For all addresses in uniqueERC20TokenAddresses, check if the sender has enough balance
         for (uint256 i = 0; i < uniqueERC20TokenAddresses.length; i++) {
             address tokenAddress = uniqueERC20TokenAddresses[i];
-            if (
-                IERC20(tokenAddress).balanceOf(address(this)) <
-                totalTokenQuantity[tokenAddress]
-            ) {
-                revert InsufficientTokenBalance();
+            uint256 tokenBalance = IERC20(tokenAddress).balanceOf(_msgSender());
+            if (tokenBalance < totalTokenQuantity[tokenAddress]) {
+                revert InsufficientTokenBalance(tokenAddress, tokenBalance);
             }
             // Transfer the tokens to the contract
-            IERC20(tokenAddress).transferFrom(
-                _msgSender(),
-                address(this),
-                totalTokenQuantity[tokenAddress]
-            );
+            IERC20(tokenAddress).transferFrom(_msgSender(), address(this), totalTokenQuantity[tokenAddress]);
         }
     }
 
@@ -274,7 +257,7 @@ abstract contract CryptoCuvee is
             IERC20(token.tokenAddress).transfer(_msgSender(), token.quantity);
         }
 
-        emit Open(_msgSender(), _tokenId);
+        emit CryptoBottleOpen(_msgSender(), _tokenId);
     }
 
     /**
@@ -283,36 +266,23 @@ abstract contract CryptoCuvee is
      * @param _quantity The quantity to mint
      * @param _category The category type
      */
-    function mint(
-        address _to,
-        uint32 _quantity,
-        string memory _category
-    ) external payable {
+    function mint(address _to, uint32 _quantity, CategoryType _category) external payable {
         // Only 3 NFTs can be minted per transaction use custom error
         if (_quantity > 3) {
             revert MaxQuantityReached();
         }
 
-        // Get the category type
-        CategoryType category = _getCategoryType(_category);
-
-        if (unclaimedTokensByCategory[category].length == 0) {
+        if (unclaimedBottlesByCategory[_category].length == 0) {
             revert CategoryFullyMinted();
         }
 
-        CryptoBottle storage cryptoBottle = cryptoBottles[
-            unclaimedTokensByCategory[category][0]
-        ];
+        CryptoBottle storage cryptoBottle = cryptoBottles[unclaimedBottlesByCategory[_category][0]];
 
         if (!hasRole(SYSTEM_WALLET_ROLE, _msgSender())) {
-            usdc.transferFrom(
-                _msgSender(),
-                address(this),
-                cryptoBottle.price * _quantity
-            );
+            usdc.transferFrom(_msgSender(), address(this), cryptoBottle.price * _quantity);
         }
 
-        _requestRandomWords(category, _quantity, _to);
+        _requestRandomWords(_category, _quantity, _to);
     }
 
     /**
@@ -320,44 +290,14 @@ abstract contract CryptoCuvee is
      * @param _receiver The royalty fee
      * @param _feeNumerator The royalty fee
      */
-    function setDefaultRoyalty(
-        address _receiver,
-        uint96 _feeNumerator
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setDefaultRoyalty(address _receiver, uint96 _feeNumerator) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _setDefaultRoyalty(_receiver, _feeNumerator);
     }
 
     /**
      * @dev The function to upgrade the contract
      */
-    function _authorizeUpgrade(
-        address
-    ) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
-
-    /**
-     * @dev The function to get the category type
-     * @param _category The category type
-     */
-    function _getCategoryType(
-        string memory _category
-    ) internal pure returns (CategoryType) {
-        if (keccak256(abi.encodePacked(_category)) == keccak256("ROUGE")) {
-            return CategoryType.ROUGE;
-        } else if (
-            keccak256(abi.encodePacked(_category)) == keccak256("BLANC")
-        ) {
-            return CategoryType.BLANC;
-        } else if (
-            keccak256(abi.encodePacked(_category)) == keccak256("ROSE")
-        ) {
-            return CategoryType.ROSE;
-        } else if (
-            keccak256(abi.encodePacked(_category)) == keccak256("CHAMPAGNE")
-        ) {
-            return CategoryType.CHAMPAGNE;
-        }
-        revert WrongCategory();
-    }
+    function _authorizeUpgrade(address) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
 
     /**
      * @dev The function to randomely select one token
@@ -365,23 +305,19 @@ abstract contract CryptoCuvee is
      * @param _random The random value
      * @param _to The address to mint to
      */
-    function _invest(
-        CategoryType _category,
-        uint256 _random,
-        address _to
-    ) internal {
-        uint256[] storage unclaimedTokens = unclaimedTokensByCategory[
-            _category
-        ];
+    function _invest(CategoryType _category, uint256 _random, address _to) internal {
+        uint256[] storage unclaimedTokens = unclaimedBottlesByCategory[_category];
+
+        if (unclaimedTokens.length == 0) {
+            revert CategoryFullyMinted();
+        }
 
         // Select a token ID based on randomness
         uint256 randomIndex = _random % unclaimedTokens.length;
         uint256 selectedTokenId = unclaimedTokens[randomIndex];
 
         // Remove the selected token from the unclaimed pool
-        unclaimedTokens[randomIndex] = unclaimedTokens[
-            unclaimedTokens.length - 1
-        ];
+        unclaimedTokens[randomIndex] = unclaimedTokens[unclaimedTokens.length - 1];
         unclaimedTokens.pop();
 
         uint256 tokenId = totalSupply() + 1;
@@ -389,6 +325,9 @@ abstract contract CryptoCuvee is
         // Mint the NFT
         _safeMint(_to, tokenId);
         tokenToCryptoBottle[tokenId] = selectedTokenId;
+
+        // Emit CryptoBottleCreated event
+        emit CryptoBottleCreated(_to, tokenId, selectedTokenId);
     }
 
     /**
@@ -397,11 +336,7 @@ abstract contract CryptoCuvee is
      * @param _quantity The quantity to mint
      * @param _to The address to mint to
      */
-    function _requestRandomWords(
-        CategoryType categoryType,
-        uint32 _quantity,
-        address _to
-    ) internal {
+    function _requestRandomWords(CategoryType categoryType, uint32 _quantity, address _to) internal {
         uint256 requestId = coordinator.requestRandomWords(
             keyHash,
             s_subscriptionId,
@@ -415,26 +350,23 @@ abstract contract CryptoCuvee is
             quantity: _quantity,
             to: _to
         });
-
+        //console.log("Request ID: %d", requestId);
         // Store the randomness request data
         randomnessRequestData[requestId] = randomRequestData;
     }
 
     /**
-     * @dev Fullfill the randomness request
+     * @dev Fulfill the randomness request
      * @param requestId The request ID
      * @param randomWords memory randomWords The random words
      */
-    function fulfillRandomWords(
-        uint256 requestId,
-        uint256[] memory randomWords
-    ) internal override {
+    function fulfillRandomWords(uint256 requestId, uint256[] memory randomWords) internal override {
         RandomRequestData memory requestData = randomnessRequestData[requestId];
 
         uint256 randomWord = randomWords[0];
         uint256 mask = 0xFFFF; // A mask to extract 16 bits
 
-        for (uint256 i = 0; i < randomWords.length; i++) {
+        for (uint256 i = 0; i < requestData.quantity; i++) {
             // Shift right and apply mask, then add the index to ensure it's always non-zero and unique.
             uint256 uniqueRandom = ((randomWord >> (16 * i)) & mask) + i;
 
@@ -454,16 +386,12 @@ abstract contract CryptoCuvee is
         address to,
         uint256 tokenId,
         address auth
-    )
-        internal
-        override(ERC721Upgradeable, ERC721EnumerableUpgradeable)
-        returns (address)
-    {
+    ) internal override(ERC721Upgradeable, ERC721EnumerableUpgradeable) returns (address) {
         return super._update(to, tokenId, auth);
     }
 
     /**
-     * @dev Overrid _increaseBalance function from ERC721RoyaltyUpgradeable
+     * @dev Override _increaseBalance function from ERC721Upgradeable and ERC721EnumerableUpgradeable
      * @param account The account to increase the balance
      * @param value The value to increase
      */
@@ -479,12 +407,7 @@ abstract contract CryptoCuvee is
      * token will be the concatenation of the `baseURI` and the `tokenId`. Empty
      * by default, can be overridden in child contracts.
      */
-    function _baseURI()
-        internal
-        view
-        override(ERC721Upgradeable)
-        returns (string memory)
-    {
+    function _baseURI() internal view override(ERC721Upgradeable) returns (string memory) {
         return baseURI;
     }
 }

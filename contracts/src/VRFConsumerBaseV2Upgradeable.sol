@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 /** ****************************************************************************
  * @notice Interface for contracts using VRF randomness
@@ -100,9 +100,7 @@ abstract contract VRFConsumerBaseV2Upgradeable is Initializable {
     error OnlyCoordinatorCanFulfill(address have, address want);
     address private vrfCoordinator;
 
-    function __VRFConsumerBaseV2Upgradeable_init(
-        address _vrfCoordinator
-    ) internal onlyInitializing {
+    function __VRFConsumerBaseV2Upgradeable_init(address _vrfCoordinator) internal onlyInitializing {
         vrfCoordinator = _vrfCoordinator;
     }
 
@@ -120,18 +118,12 @@ abstract contract VRFConsumerBaseV2Upgradeable is Initializable {
      * @param requestId The Id initially returned by requestRandomness
      * @param randomWords the VRF output expanded to the requested number of words
      */
-    function fulfillRandomWords(
-        uint256 requestId,
-        uint256[] memory randomWords
-    ) internal virtual;
+    function fulfillRandomWords(uint256 requestId, uint256[] memory randomWords) internal virtual;
 
     // rawFulfillRandomness is called by VRFCoordinator when it receives a valid VRF
     // proof. rawFulfillRandomness then calls fulfillRandomness, after validating
     // the origin of the call
-    function rawFulfillRandomWords(
-        uint256 requestId,
-        uint256[] memory randomWords
-    ) external {
+    function rawFulfillRandomWords(uint256 requestId, uint256[] memory randomWords) external {
         if (msg.sender != vrfCoordinator) {
             revert OnlyCoordinatorCanFulfill(msg.sender, vrfCoordinator);
         }

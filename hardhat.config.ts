@@ -80,6 +80,7 @@ const config: HardhatUserConfig = {
         enabled: true,
         runs: 999_999,
       },
+      viaIR: true, 
       evmVersion: "paris", // Prevent using the `PUSH0` opcode
     },
   },
@@ -585,10 +586,10 @@ const config: HardhatUserConfig = {
   xdeploy: {
     // Change this name to the name of your main contract
     // Does not necessarily have to match the contract file name
-    contract: "Greeter",
+    contract: "CryptoCuvee",
 
     // Change to `undefined` if your constructor does not have any input arguments
-    constructorArgsPath: "./deploy-args.ts",
+    constructorArgsPath: undefined,
 
     // The salt must be the same for each EVM chain for which you want to have a single contract address
     // Change the salt if you are doing a re-deployment with the same codebase
