@@ -137,7 +137,7 @@ contract CryptoCuvee is
     /**
      * @dev Unclaimed tokens by category
      */
-    mapping(CategoryType => uint256[]) private unclaimedTokensByCategory;
+    mapping(CategoryType => uint256[]) private unclaimedBottlesByCategory;
 
     /**
      * @dev The CryptoBottle's open event
@@ -186,9 +186,6 @@ contract CryptoCuvee is
         uint64 subscriptionId
     ) public payable initializer {
         __ERC721_init("CryptoCuvee", "CCV");
-        __ERC721Enumerable_init();
-        __ERC721Royalty_init();
-        __AccessControl_init();
         __VRFConsumerBaseV2Upgradeable_init(vrfCoordinator);
 
         // Init Admin Role
@@ -229,8 +226,8 @@ contract CryptoCuvee is
                     totalTokenQuantity[memToken.tokenAddress] = 0;
                 }
                 totalTokenQuantity[memToken.tokenAddress] += memToken.quantity;
-                unclaimedTokensByCategory[_cryptoBottles[i].categoryType].push(i);
             }
+            unclaimedBottlesByCategory[_cryptoBottles[i].categoryType].push(i);
         }
 
         // For all addresses in uniqueERC20TokenAddresses, check if the sender has enough balance
@@ -275,11 +272,11 @@ contract CryptoCuvee is
             revert MaxQuantityReached();
         }
 
-        if (unclaimedTokensByCategory[_category].length == 0) {
+        if (unclaimedBottlesByCategory[_category].length == 0) {
             revert CategoryFullyMinted();
         }
 
-        CryptoBottle storage cryptoBottle = cryptoBottles[unclaimedTokensByCategory[_category][0]];
+        CryptoBottle storage cryptoBottle = cryptoBottles[unclaimedBottlesByCategory[_category][0]];
 
         if (!hasRole(SYSTEM_WALLET_ROLE, _msgSender())) {
             usdc.transferFrom(_msgSender(), address(this), cryptoBottle.price * _quantity);
@@ -309,7 +306,11 @@ contract CryptoCuvee is
      * @param _to The address to mint to
      */
     function _invest(CategoryType _category, uint256 _random, address _to) internal {
-        uint256[] storage unclaimedTokens = unclaimedTokensByCategory[_category];
+        uint256[] storage unclaimedTokens = unclaimedBottlesByCategory[_category];
+
+        if (unclaimedTokens.length == 0) {
+            revert CategoryFullyMinted();
+        }
 
         // Select a token ID based on randomness
         uint256 randomIndex = _random % unclaimedTokens.length;
@@ -365,7 +366,7 @@ contract CryptoCuvee is
         uint256 randomWord = randomWords[0];
         uint256 mask = 0xFFFF; // A mask to extract 16 bits
 
-        for (uint256 i = 0; i < randomWords.length; i++) {
+        for (uint256 i = 0; i < requestData.quantity; i++) {
             // Shift right and apply mask, then add the index to ensure it's always non-zero and unique.
             uint256 uniqueRandom = ((randomWord >> (16 * i)) & mask) + i;
 
