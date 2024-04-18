@@ -49,8 +49,8 @@ contract CryptoCuveeTest is Test {
             isLinked: false,
             tokens: new CryptoCuvee.Token[](2)
         });
-        bottles[0].tokens[0] = CryptoCuvee.Token({name: "mBTC", tokenAddress: address(mockBTC), quantity: 3});
-        bottles[0].tokens[1] = CryptoCuvee.Token({name: "mETH", tokenAddress: address(mockETH), quantity: 7});
+        bottles[0].tokens[0] = CryptoCuvee.Token({name: "mBTC", tokenAddress: address(mockBTC), quantity: 3 ether});
+        bottles[0].tokens[1] = CryptoCuvee.Token({name: "mETH", tokenAddress: address(mockETH), quantity: 7 ether});
 
         // Mint mock tokens
         mockBTC.mint(deployer, 100 ether);
@@ -74,10 +74,6 @@ contract CryptoCuveeTest is Test {
 
         // Add cryptoCuvee as a consumer
         mockVRFCoordinator.addConsumer(subId, address(cryptoCuvee));
-
-        // Set allowances and mint tokens
-        mockUSDC.mint(user1, 100 ether);
-        mockUSDC.approve(address(cryptoCuvee), 100 ether);
     }
 
     function testMintCryptoBottleSystemWallet() public {
@@ -85,10 +81,13 @@ contract CryptoCuveeTest is Test {
         cryptoCuvee.mint(user1, 1, CryptoCuvee.CategoryType.ROUGE);
         vm.stopPrank();
     }
-    /*
     function testMintCryptoBottleUser1() public {
-        vm.prank(user1);
+        vm.startPrank(user1);
+         // Set allowances and mint tokens
+        mockUSDC.mint(user1, 100 ether);
+        mockUSDC.approve(address(cryptoCuvee), 100 ether);
         cryptoCuvee.mint(user1, 1, CryptoCuvee.CategoryType.ROUGE);
+        vm.stopPrank();
     }
 
     function testRevertMintingInsufficientUSDC() public {
@@ -99,14 +98,37 @@ contract CryptoCuveeTest is Test {
     }
 
     function testRevertCategoryFullyMinted() public {
-        vm.startPrank(user1);
+        vm.startPrank(systemWallet);
+        for (uint i = 0; i < 3; i++) {
+            cryptoCuvee.mint(user1, 1, CryptoCuvee.CategoryType.ROUGE);
+        }
         vm.expectRevert("CategoryFullyMinted");
         cryptoCuvee.mint(user1, 1, CryptoCuvee.CategoryType.ROUGE);
         vm.stopPrank();
     }
 
-    function testCheckSubscriptionFundingBalance() public view {
-        (uint256 balance,,,) = mockVRFCoordinator.getSubscription(1);
-        assertEq(balance, 100_001_000 ether);
-    }*/
+    function testRevertMaxQuantityReach() public {
+        vm.startPrank(systemWallet);
+        vm.expectRevert("MaxQuantityReach");
+        cryptoCuvee.mint(user1, 4, CryptoCuvee.CategoryType.ROUGE);
+        vm.stopPrank();
+    }
+
+    function testSupportsInterface() public {
+        bool isSupported = cryptoCuvee.supportsInterface(0x01ffc9a7);
+        assertTrue(isSupported);
+    }
+
+    function testSetDefaultRoyalty() public {
+        vm.startPrank(deployer);
+        cryptoCuvee.setDefaultRoyalty(user1, 10);
+        vm.stopPrank();
+    }
+
+    function testRevertSetDefaultRoyaltyUnauthorized() public {
+        vm.startPrank(user1);
+        vm.expectRevert("AccessControlUnauthorizedAccount");
+        cryptoCuvee.setDefaultRoyalty(user1, 10);
+        vm.stopPrank();
+    }
 }
