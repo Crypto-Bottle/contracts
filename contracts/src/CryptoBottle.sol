@@ -390,7 +390,7 @@ contract CryptoCuvee is
     }
 
     /**
-     * @dev Override _increaseBalance function from ERC721RoyaltyUpgradeable
+     * @dev Override _increaseBalance function from ERC721Upgradeable and ERC721EnumerableUpgradeable
      * @param account The account to increase the balance
      * @param value The value to increase
      */

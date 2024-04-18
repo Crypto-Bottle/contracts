@@ -1,3 +1,3 @@
 module.exports = {
-  skipFiles: ["mocks/", "lib/", "test/", "Create2DeployerLocal.sol"],
+  skipFiles: ["mocks/", "lib/", "test/", "VRFConsumerBaseV2Upgradeable.sol", "VRFCoordinatorV2Interface.sol"],
 };

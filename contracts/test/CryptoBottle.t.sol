@@ -3,8 +3,8 @@ pragma solidity ^0.8.23;
 
 import {Test} from "forge-std/Test.sol";
 import {CryptoCuvee} from "../src/CryptoBottle.sol";
-import {MockERC20} from "../src/mock/MockERC20.sol";
-import {VRFCoordinatorV2Mock} from "../src/mock/MockVRFCoordinator.sol";
+import {MockERC20} from "../src/mocks/MockERC20.sol";
+import {VRFCoordinatorV2Mock} from "../src/mocks/MockVRFCoordinator.sol";
 
 contract CryptoCuveeTest is Test {
     CryptoCuvee cryptoCuvee;
