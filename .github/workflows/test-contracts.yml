@@ -151,7 +151,7 @@ jobs:
         with:
           delete-old-comments: true
           lcov-file: ./lcov.info
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.TOKEN }}
 
       - name: Verify minimum coverage
         uses: zgosalvez/github-actions-report-lcov@v4
