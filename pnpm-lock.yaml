@@ -59,8 +59,8 @@ devDependencies:
     specifier: ^5.0.1
     version: 5.0.1(@openzeppelin/contracts@5.0.1)
   '@openzeppelin/hardhat-upgrades':
-    specifier: ^3.0.2
-    version: 3.0.2(@nomicfoundation/hardhat-ethers@3.0.5)(@nomicfoundation/hardhat-verify@2.0.3)(ethers@6.10.0)(hardhat@2.19.4)
+    specifier: ^3.1.0
+    version: 3.1.0(@nomicfoundation/hardhat-ethers@3.0.5)(@nomicfoundation/hardhat-verify@2.0.3)(ethers@6.10.0)(hardhat@2.19.4)
   '@tenderly/hardhat-tenderly':
     specifier: ^2.1.0
     version: 2.1.0(@types/node@20.11.24)(ethers@6.10.0)(hardhat@2.19.4)
@@ -1649,8 +1649,8 @@ packages:
       - encoding
     dev: true
 
-  /@openzeppelin/defender-sdk-base-client@1.8.0:
-    resolution: {integrity: sha512-XIJat6BW2CTM74AwG5IL0Q/aE6RXj8x7smnVKmBql4wMvmirVW+njfwzZCLhUTiBXg9AlHxIInEF14SabfIisg==}
+  /@openzeppelin/defender-sdk-base-client@1.12.0:
+    resolution: {integrity: sha512-6n5SwJWCjFciC+T7QhfXnkEmkNZGKK0efkCZDAfu/Kd8L1AICnIkWwVte71dnzCBln7wglMiZupSHL3fZqePmQ==}
     dependencies:
       amazon-cognito-identity-js: 6.3.7
       async-retry: 1.3.3
@@ -1658,20 +1658,30 @@ packages:
       - encoding
     dev: true
 
-  /@openzeppelin/defender-sdk-deploy-client@1.8.0(debug@4.3.4):
-    resolution: {integrity: sha512-/tNS2EnHuA5l095wzMbIkGMDNHZLcZQ2eLUP8z+AeKaAUeR2z4qzZ1ul21kR3EJURAyoy8aULFZanLggoBWHrA==}
+  /@openzeppelin/defender-sdk-deploy-client@1.12.0(debug@4.3.4):
+    resolution: {integrity: sha512-E1RTyh0kXGRJJy7Kq/qSjQlyHJmtytLLKGHIVbI4Ijo9vwRZ7FZhZgK9lapJNshS4E1p3WgXHSOUJtOfn3F1bg==}
     dependencies:
-      '@ethersproject/abi': 5.7.0
-      '@openzeppelin/defender-sdk-base-client': 1.8.0
-      axios: 1.6.5(debug@4.3.4)
+      '@openzeppelin/defender-sdk-base-client': 1.12.0
+      axios: 1.6.8(debug@4.3.4)
       lodash: 4.17.21
     transitivePeerDependencies:
       - debug
       - encoding
     dev: true
 
-  /@openzeppelin/hardhat-upgrades@3.0.2(@nomicfoundation/hardhat-ethers@3.0.5)(@nomicfoundation/hardhat-verify@2.0.3)(ethers@6.10.0)(hardhat@2.19.4):
-    resolution: {integrity: sha512-Fk940cxwew++bfSZKWHEXVUCr3tRBiRZZBw1nl1wUVq29cq7BrlwDkZ6hTab/+p0IOnx0l6HJHLu3amDxxs3/w==}
+  /@openzeppelin/defender-sdk-network-client@1.12.0(debug@4.3.4):
+    resolution: {integrity: sha512-0dlEHC27hOVRY+iVcoP2zH8K0jy4O+sOGKz2Ep9eebNcWc7GO6z1wsc4fU51AoiMh+G7cYb+l5z1wQ4Q3Y9vIA==}
+    dependencies:
+      '@openzeppelin/defender-sdk-base-client': 1.12.0
+      axios: 1.6.8(debug@4.3.4)
+      lodash: 4.17.21
+    transitivePeerDependencies:
+      - debug
+      - encoding
+    dev: true
+
+  /@openzeppelin/hardhat-upgrades@3.1.0(@nomicfoundation/hardhat-ethers@3.0.5)(@nomicfoundation/hardhat-verify@2.0.3)(ethers@6.10.0)(hardhat@2.19.4):
+    resolution: {integrity: sha512-CQ5Cg2kE8WeW6qajUTacBsmkntiAwJd7f6p+BUtd1fEvEv7si4H2lmAqvjOjkFc9ihIEQxMBy50IsBXSZGktmg==}
     hasBin: true
     peerDependencies:
       '@nomicfoundation/hardhat-ethers': ^3.0.0
@@ -1686,8 +1696,9 @@ packages:
       '@nomicfoundation/hardhat-verify': 2.0.3(hardhat@2.19.4)
       '@openzeppelin/defender-admin-client': 1.54.1(debug@4.3.4)
       '@openzeppelin/defender-base-client': 1.54.1(debug@4.3.4)
-      '@openzeppelin/defender-sdk-base-client': 1.8.0
-      '@openzeppelin/defender-sdk-deploy-client': 1.8.0(debug@4.3.4)
+      '@openzeppelin/defender-sdk-base-client': 1.12.0
+      '@openzeppelin/defender-sdk-deploy-client': 1.12.0(debug@4.3.4)
+      '@openzeppelin/defender-sdk-network-client': 1.12.0(debug@4.3.4)
       '@openzeppelin/upgrades-core': 1.32.3
       chalk: 4.1.2
       debug: 4.3.4(supports-color@8.1.1)
@@ -1695,7 +1706,7 @@ packages:
       ethers: 6.10.0
       hardhat: 2.19.4(ts-node@10.9.2)(typescript@5.3.3)
       proper-lockfile: 4.1.2
-      undici: 5.28.2
+      undici: 6.14.0
     transitivePeerDependencies:
       - bufferutil
       - encoding
@@ -2962,6 +2973,16 @@ packages:
     resolution: {integrity: sha512-Ii012v05KEVuUoFWmMW/UQv9aRIc3ZwkWDcM+h5Il8izZCtRVpDUfwpoFf7eOtajT3QiGR4yDUx7lPqHJULgbg==}
     dependencies:
       follow-redirects: 1.15.5(debug@4.3.4)
+      form-data: 4.0.0
+      proxy-from-env: 1.1.0
+    transitivePeerDependencies:
+      - debug
+    dev: true
+
+  /axios@1.6.8(debug@4.3.4):
+    resolution: {integrity: sha512-v/ZHtJDU39mDpyBoFVkETcd/uNdxrWRrg3bKpOKzXFA6Bvqopts6ALSMU3y6ijYxbw2B+wPrIv46egTzJXCLGQ==}
+    dependencies:
+      follow-redirects: 1.15.6(debug@4.3.4)
       form-data: 4.0.0
       proxy-from-env: 1.1.0
     transitivePeerDependencies:
@@ -4839,6 +4860,18 @@ packages:
 
   /follow-redirects@1.15.5(debug@4.3.4):
     resolution: {integrity: sha512-vSFWUON1B+yAw1VN4xMfxgn5fTUiaOzAJCKBwIIgT/+7CuGy9+r+5gITvP62j3RmaD5Ph65UaERdOSRGUzZtgw==}
+    engines: {node: '>=4.0'}
+    peerDependencies:
+      debug: '*'
+    peerDependenciesMeta:
+      debug:
+        optional: true
+    dependencies:
+      debug: 4.3.4(supports-color@8.1.1)
+    dev: true
+
+  /follow-redirects@1.15.6(debug@4.3.4):
+    resolution: {integrity: sha512-wWN62YITEaOpSK584EZXJafH1AGpO8RVgElfkuXbTOrPX4fIfOyEpW/CsiNd8JdYrAoOvafRTOEnvsO++qCqFA==}
     engines: {node: '>=4.0'}
     peerDependencies:
       debug: '*'
@@ -8778,6 +8811,11 @@ packages:
     engines: {node: '>=14.0'}
     dependencies:
       '@fastify/busboy': 2.1.0
+    dev: true
+
+  /undici@6.14.0:
+    resolution: {integrity: sha512-esJ/x2QU5boTG6thdA0o4qP3cv/oPx9mcQGcp8TAHI+ZBTa0EvM9Jiyp0ILdPGLGxs5HATTKrJqAK+YhrSFicg==}
+    engines: {node: '>=18.17'}
     dev: true
 
   /unfetch@4.2.0:
