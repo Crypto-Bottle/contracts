@@ -12,7 +12,8 @@ import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/acce
 import {VRFConsumerBaseV2Upgradeable} from "./VRFConsumerBaseV2Upgradeable.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {console} from "hardhat/console.sol";
+import {nonReentrant} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+//import {console} from "hardhat/console.sol";
 
 /**
  * @title CryptoCuvee
@@ -38,6 +39,7 @@ contract CryptoCuvee is
     error InsufficientTokenBalance(address tokenAddress, uint256 tokenBalance);
     error CategoryFullyMinted();
     error MaxQuantityReached();
+    error BottleAlreadyOpened(uint256 tokenId);
 
     /**
      * @dev The USDC token address
@@ -55,7 +57,7 @@ contract CryptoCuvee is
     struct CryptoBottle {
         CategoryType categoryType;
         uint256 price; // The price in USDC
-        bool isLinked; // If the category is linked to an NFT
+        bool isOpen; // If the category is linked to an NFT
         Token[] tokens;
     }
 
@@ -247,11 +249,17 @@ contract CryptoCuvee is
      * @dev Open a crypto bottle and get the tokens inside
      * @param _tokenId The token ID
      */
-    function openBottle(uint256 _tokenId) external {
+    function openBottle(uint256 _tokenId) external nonReentrant {
         _checkAuthorized(ownerOf(_tokenId), _msgSender(), _tokenId);
 
         uint256 cryptoBottleIndex = tokenToCryptoBottle[_tokenId];
         CryptoBottle storage cryptoBottle = cryptoBottles[cryptoBottleIndex];
+
+        if (cryptoBottle.isOpen) {
+            revert BottleAlreadyOpened(_tokenId);
+        }
+
+        cryptoBottle.isOpen = true;
 
         for (uint256 i = 0; i < cryptoBottle.tokens.length; i++) {
             Token memory token = cryptoBottle.tokens[i];
