@@ -12,7 +12,8 @@ import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/acce
 import {VRFConsumerBaseV2Upgradeable} from "./VRFConsumerBaseV2Upgradeable.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {nonReentrant} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+
 //import {console} from "hardhat/console.sol";
 
 /**
@@ -21,6 +22,7 @@ import {nonReentrant} from "@openzeppelin/contracts/security/ReentrancyGuard.sol
  */
 contract CryptoCuvee is
     Initializable,
+    ReentrancyGuardUpgradeable,
     UUPSUpgradeable,
     ERC721Upgradeable,
     ERC721EnumerableUpgradeable,
@@ -57,7 +59,6 @@ contract CryptoCuvee is
     struct CryptoBottle {
         CategoryType categoryType;
         uint256 price; // The price in USDC
-        bool isOpen; // If the category is linked to an NFT
         Token[] tokens;
     }
 
@@ -143,6 +144,11 @@ contract CryptoCuvee is
     mapping(CategoryType => uint256[]) private unclaimedBottlesByCategory;
 
     /**
+     * @dev All Opened Bottles
+     */
+    mapping(uint256 => bool) public openedBottles;
+
+    /**
      * @dev The CryptoBottle's open event
      */
     event CryptoBottleOpen(address indexed to, uint256 indexed tokenId);
@@ -214,7 +220,6 @@ contract CryptoCuvee is
 
             newBottle.categoryType = _cryptoBottles[i].categoryType;
             newBottle.price = _cryptoBottles[i].price;
-            newBottle.isLinked = _cryptoBottles[i].isLinked;
 
             // Explicitly copy each Token struct from memory to storage
             for (uint256 j = 0; j < _cryptoBottles[i].tokens.length; j++) {
@@ -241,7 +246,12 @@ contract CryptoCuvee is
                 revert InsufficientTokenBalance(tokenAddress, tokenBalance);
             }
             // Transfer the tokens to the contract
-            SafeERC20.safeTransferFrom(IERC20(tokenAddress), _msgSender(), address(this), totalTokenQuantity[tokenAddress]);
+            SafeERC20.safeTransferFrom(
+                IERC20(tokenAddress),
+                _msgSender(),
+                address(this),
+                totalTokenQuantity[tokenAddress]
+            );
         }
     }
 
@@ -255,11 +265,11 @@ contract CryptoCuvee is
         uint256 cryptoBottleIndex = tokenToCryptoBottle[_tokenId];
         CryptoBottle storage cryptoBottle = cryptoBottles[cryptoBottleIndex];
 
-        if (cryptoBottle.isOpen) {
+        if (openedBottles[_tokenId]) {
             revert BottleAlreadyOpened(_tokenId);
         }
 
-        cryptoBottle.isOpen = true;
+        openedBottles[_tokenId] = true;
 
         for (uint256 i = 0; i < cryptoBottle.tokens.length; i++) {
             Token memory token = cryptoBottle.tokens[i];
@@ -275,7 +285,7 @@ contract CryptoCuvee is
      * @param _quantity The quantity to mint
      * @param _category The category type
      */
-    function mint(address _to, uint32 _quantity, CategoryType _category) external payable {
+    function mint(address _to, uint32 _quantity, CategoryType _category) external payable nonReentrant {
         // Only 3 NFTs can be minted per transaction use custom error
         if (_quantity > 3) {
             revert MaxQuantityReached();
