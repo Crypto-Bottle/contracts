@@ -108,7 +108,7 @@ contract CryptoCuveeTest is Test {
         vm.stopPrank();
     }
 
-    function testContractInit() public view {
+    function testContractInit() public {
         assertTrue(cryptoCuvee.hasRole(cryptoCuvee.SYSTEM_WALLET_ROLE(), address(systemWallet)));
     }
 
@@ -175,7 +175,7 @@ contract CryptoCuveeTest is Test {
         vm.stopPrank();
     }
 
-    function testSupportsInterface() public view {
+    function testSupportsInterface() public {
         bool isSupported = cryptoCuvee.supportsInterface(0x01ffc9a7);
         assertTrue(isSupported);
     }

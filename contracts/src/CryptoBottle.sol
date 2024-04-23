@@ -10,6 +10,7 @@ import {ERC721RoyaltyUpgradeable} from "@openzeppelin/contracts-upgradeable/toke
 import {VRFCoordinatorV2Interface} from "./VRFCoordinatorV2Interface.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {VRFConsumerBaseV2Upgradeable} from "./VRFConsumerBaseV2Upgradeable.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {console} from "hardhat/console.sol";
 
@@ -238,7 +239,7 @@ contract CryptoCuvee is
                 revert InsufficientTokenBalance(tokenAddress, tokenBalance);
             }
             // Transfer the tokens to the contract
-            IERC20(tokenAddress).transferFrom(_msgSender(), address(this), totalTokenQuantity[tokenAddress]);
+            SafeERC20.safeTransferFrom(IERC20(tokenAddress), _msgSender(), address(this), totalTokenQuantity[tokenAddress]);
         }
     }
 
@@ -254,7 +255,7 @@ contract CryptoCuvee is
 
         for (uint256 i = 0; i < cryptoBottle.tokens.length; i++) {
             Token memory token = cryptoBottle.tokens[i];
-            IERC20(token.tokenAddress).transfer(_msgSender(), token.quantity);
+            SafeERC20.safeTransfer(IERC20(token.tokenAddress), _msgSender(), token.quantity);
         }
 
         emit CryptoBottleOpen(_msgSender(), _tokenId);
@@ -279,7 +280,7 @@ contract CryptoCuvee is
         CryptoBottle storage cryptoBottle = cryptoBottles[unclaimedBottlesByCategory[_category][0]];
 
         if (!hasRole(SYSTEM_WALLET_ROLE, _msgSender())) {
-            usdc.transferFrom(_msgSender(), address(this), cryptoBottle.price * _quantity);
+            SafeERC20.safeTransferFrom(usdc, _msgSender(), address(this), cryptoBottle.price * _quantity);
         }
 
         _requestRandomWords(_category, _quantity, _to);
