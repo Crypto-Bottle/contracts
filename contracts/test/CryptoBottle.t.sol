@@ -48,7 +48,6 @@ contract CryptoCuveeTest is Test {
         bottles[0] = CryptoCuvee.CryptoBottle({
             categoryType: CryptoCuvee.CategoryType.ROUGE,
             price: 10 ether,
-            isLinked: false,
             tokens: new CryptoCuvee.Token[](2)
         });
         bottles[0].tokens[0] = CryptoCuvee.Token({name: "mBTC", tokenAddress: address(mockBTC), quantity: 3 ether});
@@ -85,7 +84,6 @@ contract CryptoCuveeTest is Test {
         bottles[0] = CryptoCuvee.CryptoBottle({
             categoryType: CryptoCuvee.CategoryType.ROUGE,
             price: 10 ether,
-            isLinked: false,
             tokens: new CryptoCuvee.Token[](2)
         });
         bottles[0].tokens[0] = CryptoCuvee.Token({name: "mBTC", tokenAddress: address(mockBTC), quantity: 3 ether});
@@ -108,7 +106,7 @@ contract CryptoCuveeTest is Test {
         vm.stopPrank();
     }
 
-    function testContractInit() public view {
+    function testContractInit() public {
         assertTrue(cryptoCuvee.hasRole(cryptoCuvee.SYSTEM_WALLET_ROLE(), address(systemWallet)));
     }
 
@@ -146,6 +144,21 @@ contract CryptoCuveeTest is Test {
         vm.stopPrank();
     }
 
+    function testOpenBottleRevert() public {
+        vm.startPrank(user1);
+        // Set allowances and mint tokens
+        mockUSDC.mint(user1, 100 ether);
+        mockUSDC.approve(address(cryptoCuvee), 100 ether);
+        cryptoCuvee.mint(user1, 1, CryptoCuvee.CategoryType.ROUGE);
+        mockVRFCoordinator.fulfillRandomWords(1, address(cryptoCuvee));
+        cryptoCuvee.openBottle(1);
+        vm.expectRevert(
+            abi.encodeWithSelector(CryptoCuvee.BottleAlreadyOpened.selector, 1)
+        );
+        cryptoCuvee.openBottle(1);
+        vm.stopPrank();
+    }
+
     function testTokenURI() public {
         vm.startPrank(user1);
         // Set allowances and mint tokens
@@ -175,7 +188,7 @@ contract CryptoCuveeTest is Test {
         vm.stopPrank();
     }
 
-    function testSupportsInterface() public view {
+    function testSupportsInterface() public {
         bool isSupported = cryptoCuvee.supportsInterface(0x01ffc9a7);
         assertTrue(isSupported);
     }
