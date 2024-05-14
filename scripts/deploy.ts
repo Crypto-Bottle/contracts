@@ -1,37 +1,15 @@
-import hre from "hardhat";
-
-// Colour codes for terminal prints
-const RESET = "\x1b[0m";
-const GREEN = "\x1b[32m";
-
-function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+import { ethers, upgrades } from "hardhat";
 
 async function main() {
-  const constructorArgs = ["Hello, Hardhat!"];
-  const contract = await hre.ethers.deployContract("Greeter", constructorArgs);
+  console.log("Deploying CryptoCuvee implementation...");
+  const CryptoCuvee = await ethers.getContractFactory("CryptoCuvee");
 
-  await contract.waitForDeployment();
-  const contractAddress = await contract.getAddress();
-
-  console.log("Greeter deployed to: " + `${GREEN}${contractAddress}${RESET}\n`);
-
-  console.log(
-    "Waiting 30 seconds before beginning the contract verification to allow the block explorer to index the contract...\n",
-  );
-  await delay(30000); // Wait for 30 seconds before verifying the contract
-
-  await hre.run("verify:verify", {
-    address: contractAddress,
-    constructorArguments: constructorArgs,
+  const cryptoCuvee = await upgrades.deployProxy(CryptoCuvee, {
+    initializer: false,
   });
 
-  // Uncomment if you want to enable the `tenderly` extension
-  // await hre.tenderly.verify({
-  //   name: "Greeter",
-  //   address: contractAddress,
-  // });
+  await cryptoCuvee.deployed();
+  console.log("CryptoCuvee Implementation deployed to:", cryptoCuvee.address);
 }
 
 main().catch((error) => {
