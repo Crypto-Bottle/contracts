@@ -24,13 +24,20 @@ import "@openzeppelin/hardhat-upgrades";
 tdly.setup({ automaticVerifications: false });
 
 const ethMainnetUrl = vars.get("ETH_MAINNET_URL", "https://rpc.ankr.com/eth");
-const accounts = [
+/*const accounts = [
   vars.get(
     "PRIVATE_KEY",
     // `keccak256("DEFAULT_VALUE")`
     "0x0d1706281056b7de64efd2088195fa8224c39103f578c9b84f951721df3fa71c",
   ),
-];
+  // Import from seed phrase with 
+
+];*/
+
+const accounts = {
+  mnemonic: vars.get("MNEMONIC"),
+};
+
 const ledgerAccounts = [
   vars.get(
     "LEDGER_ACCOUNT",
@@ -80,7 +87,7 @@ const config: HardhatUserConfig = {
         enabled: true,
         runs: 999_999,
       },
-      viaIR: true, 
+      viaIR: true,
       evmVersion: "paris", // Prevent using the `PUSH0` opcode
     },
   },
@@ -224,8 +231,8 @@ const config: HardhatUserConfig = {
       ledgerAccounts,
     },
     mumbai: {
-      chainId: 80001,
-      url: vars.get("POLYGON_TESTNET_URL", "https://rpc-mumbai.maticvigil.com"),
+      chainId: 80002,
+      url: vars.get("POLYGON_TESTNET_URL", "https://rpc-amoy.polygon.technology"),
       accounts,
       ledgerAccounts,
     },
@@ -600,7 +607,7 @@ const config: HardhatUserConfig = {
     ),
 
     // This is your wallet's private key
-    signer: accounts[0],
+    signer: accounts,
 
     // Use the network names specified here: https://github.com/pcaversaccio/xdeployer#configuration
     // Use `localhost` or `hardhat` for local testing
