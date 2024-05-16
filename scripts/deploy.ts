@@ -8,8 +8,11 @@ async function main() {
     initializer: false,
   });
 
-  await cryptoCuvee.deployed();
-  console.log("CryptoCuvee Implementation deployed to:", cryptoCuvee.address);
+  await cryptoCuvee.waitForDeployment();
+  console.log(
+    "CryptoCuvee Implementation deployed to:",
+    await cryptoCuvee.getAddress(),
+  );
 }
 
 main().catch((error) => {

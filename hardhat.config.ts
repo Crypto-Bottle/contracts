@@ -230,7 +230,7 @@ const config: HardhatUserConfig = {
       accounts,
       ledgerAccounts,
     },
-    mumbai: {
+    polygonAmoy: {
       chainId: 80002,
       url: vars.get("POLYGON_TESTNET_URL", "https://rpc-amoy.polygon.technology"),
       accounts,
@@ -676,7 +676,7 @@ const config: HardhatUserConfig = {
       // For Polygon testnets & mainnets
       polygon: vars.get("POLYGON_API_KEY", ""),
       polygonZkEVM: vars.get("POLYGON_ZKEVM_API_KEY", ""),
-      polygonMumbai: vars.get("POLYGON_API_KEY", ""),
+      polygonAmoy: vars.get("POLYGON_API_KEY", ""),
       polygonZkEVMTestnet: vars.get("POLYGON_ZKEVM_API_KEY", ""),
       // For Arbitrum testnet & mainnets
       arbitrumOne: vars.get("ARBITRUM_API_KEY", ""),
