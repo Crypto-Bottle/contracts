@@ -35,7 +35,10 @@ const ethMainnetUrl = vars.get("ETH_MAINNET_URL", "https://rpc.ankr.com/eth");
 ];*/
 
 const accounts = {
-  mnemonic: vars.get("MNEMONIC"),
+  mnemonic: vars.get(
+    "MNEMONIC",
+    "test test test test test test test test test test test junk",
+  ),
 };
 
 const ledgerAccounts = [
@@ -232,7 +235,10 @@ const config: HardhatUserConfig = {
     },
     polygonAmoy: {
       chainId: 80002,
-      url: vars.get("POLYGON_TESTNET_URL", "https://rpc-amoy.polygon.technology"),
+      url: vars.get(
+        "POLYGON_TESTNET_URL",
+        "https://rpc-amoy.polygon.technology",
+      ),
       accounts,
       ledgerAccounts,
     },
