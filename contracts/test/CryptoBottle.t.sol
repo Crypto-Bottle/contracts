@@ -1,11 +1,11 @@
-// SPDX-License-Identifier: Unlicense
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
 import {Test} from "forge-std/Test.sol";
 import {CryptoCuvee} from "../src/CryptoBottle.sol";
 import {MockERC20} from "../src/mocks/MockERC20.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
-import {VRFCoordinatorV2Mock} from "../src/mocks/MockVRFCoordinator.sol";
+import {MockVRFCoordinatorV2_5} from "../src/mocks/MockVRFCoordinatorV2_5.sol";
 
 contract CryptoCuveeTest is Test {
     CryptoCuvee cryptoCuvee;
@@ -14,7 +14,7 @@ contract CryptoCuveeTest is Test {
     MockERC20 mockBTC;
     MockERC20 mockETH;
     MockERC20 mockLINK;
-    VRFCoordinatorV2Mock mockVRFCoordinator;
+    MockVRFCoordinatorV2_5 mockVRFCoordinator;
 
     address deployer;
     address systemWallet;
@@ -34,7 +34,7 @@ contract CryptoCuveeTest is Test {
         mockLINK = new MockERC20("Mock LINK", "mLINK");
 
         // Deploy MockVRFCoordinator
-        mockVRFCoordinator = new VRFCoordinatorV2Mock(1, 1);
+        mockVRFCoordinator = new MockVRFCoordinatorV2_5(0x1);
 
         // Setup and fund subscription
         uint64 subId = mockVRFCoordinator.createSubscription();
@@ -89,9 +89,7 @@ contract CryptoCuveeTest is Test {
         bottles[0].tokens[0] = CryptoCuvee.Token({name: "mBTC", tokenAddress: address(mockBTC), quantity: 3 ether});
         bottles[0].tokens[1] = CryptoCuvee.Token({name: "mETH", tokenAddress: address(mockETH), quantity: 7 ether});
 
-         vm.expectRevert(
-            abi.encodeWithSelector(CryptoCuvee.InsufficientTokenBalance.selector,  address(mockBTC), 0)
-        );
+        vm.expectRevert(abi.encodeWithSelector(CryptoCuvee.InsufficientTokenBalance.selector, address(mockBTC), 0));
         cryptoCuvee2.initialize(
             mockUSDC,
             bottles,
@@ -152,9 +150,7 @@ contract CryptoCuveeTest is Test {
         cryptoCuvee.mint(user1, 1, CryptoCuvee.CategoryType.ROUGE);
         mockVRFCoordinator.fulfillRandomWords(1, address(cryptoCuvee));
         cryptoCuvee.openBottle(1);
-        vm.expectRevert(
-            abi.encodeWithSelector(CryptoCuvee.BottleAlreadyOpened.selector, 1)
-        );
+        vm.expectRevert(abi.encodeWithSelector(CryptoCuvee.BottleAlreadyOpened.selector, 1));
         cryptoCuvee.openBottle(1);
         vm.stopPrank();
     }

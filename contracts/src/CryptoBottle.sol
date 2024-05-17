@@ -7,7 +7,8 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {ERC721Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import {ERC721EnumerableUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 import {ERC721RoyaltyUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721RoyaltyUpgradeable.sol";
-import {VRFCoordinatorV2Interface} from "./VRFCoordinatorV2Interface.sol";
+import {IVRFCoordinatorV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/interfaces/IVRFCoordinatorV2Plus.sol";
+import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {VRFConsumerBaseV2Upgradeable} from "./VRFConsumerBaseV2Upgradeable.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -93,7 +94,7 @@ contract CryptoCuvee is
     /**
      * @dev The Chainlink VRF coordinator address
      */
-    VRFCoordinatorV2Interface private coordinator;
+    IVRFCoordinatorV2Plus private coordinator;
     /**
      * @dev The key hash for the Chainlink VRF
      */
@@ -109,7 +110,7 @@ contract CryptoCuvee is
     /**
      * @dev The subscription ID for the Chainlink VRF
      */
-    uint64 private s_subscriptionId;
+    uint256 private s_subscriptionId;
 
     mapping(uint256 => RandomRequestData) private randomnessRequestData;
 
@@ -192,7 +193,7 @@ contract CryptoCuvee is
         bytes32 _keyHash,
         uint32 _callbackGasLimit,
         uint16 _requestConfirmations,
-        uint64 subscriptionId
+        uint256 subscriptionId
     ) public payable initializer {
         __ERC721_init("CryptoCuvee", "CCV");
         __VRFConsumerBaseV2Upgradeable_init(vrfCoordinator);
@@ -206,7 +207,7 @@ contract CryptoCuvee is
         usdc = _usdc;
         baseURI = _baseUri;
         // Initialize Chainlink VRF
-        coordinator = VRFCoordinatorV2Interface(vrfCoordinator);
+        coordinator = IVRFCoordinatorV2Plus(vrfCoordinator);
         keyHash = _keyHash;
         callbackGasLimit = _callbackGasLimit;
         requestConfirmations = _requestConfirmations;
@@ -357,11 +358,14 @@ contract CryptoCuvee is
      */
     function _requestRandomWords(CategoryType categoryType, uint32 _quantity, address _to) internal {
         uint256 requestId = coordinator.requestRandomWords(
-            keyHash,
-            s_subscriptionId,
-            requestConfirmations,
-            callbackGasLimit,
-            _quantity
+            VRFV2PlusClient.RandomWordsRequest({
+                keyHash: keyHash,
+                subId: s_subscriptionId,
+                requestConfirmations: requestConfirmations,
+                callbackGasLimit: callbackGasLimit,
+                numWords: _quantity,
+                extraArgs: ""
+            })
         );
 
         RandomRequestData memory randomRequestData = RandomRequestData({

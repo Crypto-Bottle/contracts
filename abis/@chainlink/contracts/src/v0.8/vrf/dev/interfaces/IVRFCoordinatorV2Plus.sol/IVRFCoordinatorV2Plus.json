@@ -1,0 +1,13 @@
+[
+  "function acceptSubscriptionOwnerTransfer(uint256)",
+  "function addConsumer(uint256,address)",
+  "function cancelSubscription(uint256,address)",
+  "function createSubscription() returns (uint256)",
+  "function fundSubscriptionWithNative(uint256) payable",
+  "function getActiveSubscriptionIds(uint256,uint256) view returns (uint256[])",
+  "function getSubscription(uint256) view returns (uint96, uint96, uint64, address, address[])",
+  "function pendingRequestExists(uint256) view returns (bool)",
+  "function removeConsumer(uint256,address)",
+  "function requestRandomWords(tuple(bytes32,uint256,uint16,uint32,uint32,bytes)) returns (uint256)",
+  "function requestSubscriptionOwnerTransfer(uint256,address)"
+]

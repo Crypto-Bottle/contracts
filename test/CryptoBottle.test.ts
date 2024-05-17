@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
-import { MockERC20, MockCryptoCuvee, VRFCoordinatorV2Mock } from "../typechain-types";
+import { MockERC20, MockCryptoCuvee, VRFCoordinatorV2_5 } from "../typechain-types";
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import type { ContractFactory, EventLog } from "ethers";
 
@@ -14,7 +14,7 @@ describe("CryptoCuvee", () => {
   let mockETH: MockERC20;
   let mockLINK: MockERC20;
   let cryptoCuvee: MockCryptoCuvee;
-  let mockVRFCoordinator: VRFCoordinatorV2Mock;
+  let mockVRFCoordinator: VRFCoordinatorV2_5;
 
   beforeEach(async () => {
     [deployerAccount, systemWalletAccount, user1, user2] =
@@ -38,7 +38,7 @@ describe("CryptoCuvee", () => {
 
     // Deploy MockVRFCoordinator
     const MockVRFCoordinatorFactory =
-      await ethers.getContractFactory("VRFCoordinatorV2Mock");
+      await ethers.getContractFactory("VRFCoordinatorV2_5");
     mockVRFCoordinator = await MockVRFCoordinatorFactory.deploy(1n, 1n);
     await mockVRFCoordinator.waitForDeployment();
 
@@ -213,7 +213,7 @@ describe("CryptoCuvee wrong init", () => {
   let mockETH: MockERC20;
   let mockLINK: MockERC20;
   let cryptoCuvee: MockCryptoCuvee;
-  let mockVRFCoordinator: VRFCoordinatorV2Mock;
+  let mockVRFCoordinator: VRFCoordinatorV2_5;
 
   beforeEach(async () => {
     [deployerAccount, systemWalletAccount] =
@@ -237,7 +237,7 @@ describe("CryptoCuvee wrong init", () => {
 
     // Deploy MockVRFCoordinator
     const MockVRFCoordinatorFactory =
-      await ethers.getContractFactory("VRFCoordinatorV2Mock");
+      await ethers.getContractFactory("VRFCoordinatorV2_5");
     mockVRFCoordinator = await MockVRFCoordinatorFactory.deploy(1n, 1n);
     await mockVRFCoordinator.waitForDeployment();
 

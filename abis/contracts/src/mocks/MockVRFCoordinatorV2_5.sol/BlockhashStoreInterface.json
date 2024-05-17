@@ -1,0 +1,3 @@
+[
+  "function getBlockhash(uint256) view returns (bytes32)"
+]
