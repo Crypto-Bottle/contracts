@@ -305,6 +305,13 @@ contract CryptoCuvee is
         _requestRandomWords(_category, _quantity, _to);
     }
 
+    /** 
+     * @dev Whitdraw the USDC from the contract
+     */
+    function withdrawUSDC() external onlyRole(DEFAULT_ADMIN_ROLE){
+        SafeERC20.safeTransfer(usdc, _msgSender(), usdc.balanceOf(address(this)));
+    }
+    
     /**
      * @dev Set default royalty fee
      * @param _receiver The royalty fee
