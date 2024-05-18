@@ -4,7 +4,6 @@ pragma solidity ^0.8.23;
 
 // solhint-disable-next-line no-unused-import
 import {IVRFCoordinatorV2Plus, IVRFSubscriptionV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/interfaces/IVRFCoordinatorV2Plus.sol";
-import {console} from "forge-std/console.sol";
 import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
 import {SubscriptionAPIMock} from "./SubscriptionAPIMock.sol";
 import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
@@ -160,7 +159,6 @@ contract VRFCoordinatorV2_5Mock is SubscriptionAPIMock, IVRFCoordinatorV2Plus {
         } else {
             uint96 prevBal = subcription.balance;
             if (prevBal < payment) {
-                console.log("prevBal", prevBal, payment);
                 revert InsufficientBalance();
             }
             subcription.balance = prevBal - payment;
