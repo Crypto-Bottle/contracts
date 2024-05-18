@@ -1,6 +1,10 @@
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
-import { MockERC20, MockCryptoCuvee, VRFCoordinatorV2_5 } from "../typechain-types";
+import {
+  MockERC20,
+  MockCryptoCuvee,
+  VRFCoordinatorV2_5Mock,
+} from "../typechain-types";
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import type { ContractFactory, EventLog } from "ethers";
 
@@ -14,7 +18,7 @@ describe("CryptoCuvee", () => {
   let mockETH: MockERC20;
   let mockLINK: MockERC20;
   let cryptoCuvee: MockCryptoCuvee;
-  let mockVRFCoordinator: VRFCoordinatorV2_5;
+  let mockVRFCoordinator: VRFCoordinatorV2_5Mock;
 
   beforeEach(async () => {
     [deployerAccount, systemWalletAccount, user1, user2] =
@@ -37,22 +41,28 @@ describe("CryptoCuvee", () => {
     await mockLINK.waitForDeployment();
 
     // Deploy MockVRFCoordinator
-    const MockVRFCoordinatorFactory =
-      await ethers.getContractFactory("VRFCoordinatorV2_5");
-    mockVRFCoordinator = await MockVRFCoordinatorFactory.deploy(1n, 1n);
+    const MockVRFCoordinatorFactory = await ethers.getContractFactory(
+      "VRFCoordinatorV2_5Mock",
+    );
+    mockVRFCoordinator = await MockVRFCoordinatorFactory.deploy(
+      ethers.parseEther("1"),
+      ethers.parseEther("1"),
+      ethers.parseEther("1"),
+    );
     await mockVRFCoordinator.waitForDeployment();
 
-    const tx = await mockVRFCoordinator.connect(deployerAccount).createSubscription();
-    const receipt = await tx.wait()
+    const tx = await mockVRFCoordinator
+      .connect(deployerAccount)
+      .createSubscription();
+    const receipt = await tx.wait();
     const subId = (receipt?.logs[0] as EventLog)?.args[0] ?? 1n;
-    await mockVRFCoordinator.fundSubscription(subId, 1000n);
 
     const mockCoordinatorAddress = await mockVRFCoordinator.getAddress();
-
-    // Fund subscription 
-    await mockLINK.mint(deployerAccount.address, 100_000_000n);
-    await mockLINK.approve(mockCoordinatorAddress, 100_000_000n);
-    await mockVRFCoordinator.fundSubscription(subId, 100_000_000n);
+    // Fund subscription
+    await mockVRFCoordinator.fundSubscription(
+      subId,
+      ethers.parseEther("100000000"),
+    );
 
     const exampleCryptoBottle = [
       {
@@ -79,7 +89,8 @@ describe("CryptoCuvee", () => {
     await mockETH.mint(deployerAccount.address, 100n);
 
     // Prepare CryptoCuvee for deployment
-    const CryptoCuveeFactory = await ethers.getContractFactory("MockCryptoCuvee");
+    const CryptoCuveeFactory =
+      await ethers.getContractFactory("MockCryptoCuvee");
     cryptoCuvee = (await upgrades.deployProxy(
       CryptoCuveeFactory as ContractFactory,
       { initializer: false },
@@ -136,7 +147,7 @@ describe("CryptoCuvee", () => {
 
   it("Should revert if the category is totally minted", async () => {
     await expect(
-      cryptoCuvee.connect(user1).mint(user1.address, 1, 2)
+      cryptoCuvee.connect(user1).mint(user1.address, 1, 2),
     ).to.be.revertedWithCustomError(cryptoCuvee, "CategoryFullyMinted");
   });
 
@@ -147,32 +158,41 @@ describe("CryptoCuvee", () => {
 
   it("Should revert if the role is not granted when setDefaultRoyalty", async () => {
     await expect(
-      cryptoCuvee.connect(user1).setDefaultRoyalty(user1.address, 10)
-    ).to.be.revertedWithCustomError(cryptoCuvee, "AccessControlUnauthorizedAccount");
+      cryptoCuvee.connect(user1).setDefaultRoyalty(user1.address, 10),
+    ).to.be.revertedWithCustomError(
+      cryptoCuvee,
+      "AccessControlUnauthorizedAccount",
+    );
   });
 
   it("Should set default royalty correctly", async () => {
-    await cryptoCuvee.connect(deployerAccount).setDefaultRoyalty(user1.address, 10);
+    await cryptoCuvee
+      .connect(deployerAccount)
+      .setDefaultRoyalty(user1.address, 10);
   });
 
   it("Should successfully mint with random fulfillment simulation from chainlink", async () => {
     await cryptoCuvee.connect(user1).mint(user1.address, 1, 1n);
-    await mockVRFCoordinator.fulfillRandomWords(1n, await cryptoCuvee.getAddress());
+    await mockVRFCoordinator.fulfillRandomWords(
+      1n,
+      await cryptoCuvee.getAddress(),
+    );
   });
 
   it("Should revert if the quantity to be mint is more than 3", async () => {
     await expect(
-      cryptoCuvee.connect(user1).mint(user1.address, 4, 1n)
+      cryptoCuvee.connect(user1).mint(user1.address, 4, 1n),
     ).to.be.revertedWithCustomError(cryptoCuvee, "MaxQuantityReached");
   });
 
   it("Should upgrade the implementation", async () => {
     // change the implementation of the contract
-    const CryptoCuveeFactory = await ethers.getContractFactory("MockCryptoCuvee");
+    const CryptoCuveeFactory =
+      await ethers.getContractFactory("MockCryptoCuvee");
     await upgrades.upgradeProxy(
       await cryptoCuvee.getAddress(),
-      CryptoCuveeFactory
-    )
+      CryptoCuveeFactory,
+    );
   });
 
   it("Should revert if the role is not admin for upgrade", async () => {
@@ -180,28 +200,39 @@ describe("CryptoCuvee", () => {
       signer: user1,
     });
     await expect(
-      upgrades.upgradeProxy(
-        await cryptoCuvee.getAddress(),
-        CryptoCuveeFactory
-      )
-    ).to.be.revertedWithCustomError(cryptoCuvee, "AccessControlUnauthorizedAccount");
+      upgrades.upgradeProxy(await cryptoCuvee.getAddress(), CryptoCuveeFactory),
+    ).to.be.revertedWithCustomError(
+      cryptoCuvee,
+      "AccessControlUnauthorizedAccount",
+    );
   });
 
   it("Should mint a bottle and open a bottle with releasing the tokens", async () => {
     await cryptoCuvee.connect(user1).mint(user1.address, 1, 1n);
-    await mockVRFCoordinator.fulfillRandomWords(1n, await cryptoCuvee.getAddress());
+    await mockVRFCoordinator.fulfillRandomWords(
+      1n,
+      await cryptoCuvee.getAddress(),
+    );
     await cryptoCuvee.connect(user1).openBottle(1);
   });
 
   it("Should successfully return tokenURI", async () => {
     // Mint a bottle
     await cryptoCuvee.connect(user1).mint(user1.address, 1, 1n);
-    await mockVRFCoordinator.fulfillRandomWords(1n, await cryptoCuvee.getAddress());
+    await mockVRFCoordinator.fulfillRandomWords(
+      1n,
+      await cryptoCuvee.getAddress(),
+    );
     expect(await cryptoCuvee.tokenURI(1)).to.equal("https://test.com/1");
   });
 
   it("Should test increase balance", async () => {
-    await expect(cryptoCuvee.testIncreaseBalance(user1.address, 1n)).to.be.revertedWithCustomError(cryptoCuvee, "ERC721EnumerableForbiddenBatchMint");
+    await expect(
+      cryptoCuvee.testIncreaseBalance(user1.address, 1n),
+    ).to.be.revertedWithCustomError(
+      cryptoCuvee,
+      "ERC721EnumerableForbiddenBatchMint",
+    );
   });
 });
 
@@ -213,11 +244,10 @@ describe("CryptoCuvee wrong init", () => {
   let mockETH: MockERC20;
   let mockLINK: MockERC20;
   let cryptoCuvee: MockCryptoCuvee;
-  let mockVRFCoordinator: VRFCoordinatorV2_5;
+  let mockVRFCoordinator: VRFCoordinatorV2_5Mock;
 
   beforeEach(async () => {
-    [deployerAccount, systemWalletAccount] =
-      await ethers.getSigners();
+    [deployerAccount, systemWalletAccount] = await ethers.getSigners();
 
     // Deploy mock USDC
     const MockERC20Factory = await ethers.getContractFactory("MockERC20");
@@ -236,25 +266,29 @@ describe("CryptoCuvee wrong init", () => {
     await mockLINK.waitForDeployment();
 
     // Deploy MockVRFCoordinator
-    const MockVRFCoordinatorFactory =
-      await ethers.getContractFactory("VRFCoordinatorV2_5");
-    mockVRFCoordinator = await MockVRFCoordinatorFactory.deploy(1n, 1n);
+    const MockVRFCoordinatorFactory = await ethers.getContractFactory(
+      "VRFCoordinatorV2_5Mock",
+    );
+    mockVRFCoordinator = await MockVRFCoordinatorFactory.deploy(1n, 1n, 1n);
     await mockVRFCoordinator.waitForDeployment();
 
-    const tx = await mockVRFCoordinator.connect(deployerAccount).createSubscription();
-    const receipt = await tx.wait()
+    const tx = await mockVRFCoordinator
+      .connect(deployerAccount)
+      .createSubscription();
+    const receipt = await tx.wait();
     const subId = (receipt?.logs[0] as EventLog)?.args[0] ?? 1n;
     await mockVRFCoordinator.fundSubscription(subId, 1000n);
 
     const mockCoordinatorAddress = await mockVRFCoordinator.getAddress();
 
-    // Fund subscription 
+    // Fund subscription
     await mockLINK.mint(deployerAccount.address, 100_000_000n);
     await mockLINK.approve(mockCoordinatorAddress, 100_000_000n);
     await mockVRFCoordinator.fundSubscription(subId, 100_000_000n);
 
     // Prepare CryptoCuvee for deployment
-    const CryptoCuveeFactory = await ethers.getContractFactory("MockCryptoCuvee");
+    const CryptoCuveeFactory =
+      await ethers.getContractFactory("MockCryptoCuvee");
     cryptoCuvee = (await upgrades.deployProxy(
       CryptoCuveeFactory as ContractFactory,
       { initializer: false },
@@ -264,7 +298,6 @@ describe("CryptoCuvee wrong init", () => {
 
     // Add the CryptoBottle contract as a consumer
     await mockVRFCoordinator.addConsumer(subId, await cryptoCuvee.getAddress());
-
   });
 
   it("Should revert if we try to re initialize the contract", async () => {
@@ -296,7 +329,7 @@ describe("CryptoCuvee wrong init", () => {
         2000000, // callbackGasLimit
         1, // requestConfirmations
         1, // subscriptionId, assuming "1" for example
-      )
+      ),
     ).to.be.revertedWithCustomError(cryptoCuvee, "InvalidInitialization");
   });
 
@@ -332,8 +365,7 @@ describe("CryptoCuvee wrong init", () => {
         2000000, // callbackGasLimit
         1, // requestConfirmations
         1, // subscriptionId, assuming "1" for example
-      )
+      ),
     ).to.be.revertedWithCustomError(cryptoCuvee, "InsufficientTokenBalance");
   });
-
 });

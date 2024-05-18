@@ -34,12 +34,10 @@ contract CryptoCuveeTest is Test {
         mockLINK = new MockERC20("Mock LINK", "mLINK");
 
         // Deploy MockVRFCoordinator
-        mockVRFCoordinator = new VRFCoordinatorV2_5Mock(0, 0, 1e18);
+        mockVRFCoordinator = new VRFCoordinatorV2_5Mock(1 ether, 1 ether, 1 ether);
 
         // Setup and fund subscription
         uint256 subId = mockVRFCoordinator.createSubscription();
-        mockLINK.mint(deployer, 100_000_000 ether);
-        mockLINK.approve(address(mockVRFCoordinator), 100_000_000 ether);
         mockVRFCoordinator.fundSubscription(subId, 100_000_000 ether);
 
         // Deploy CryptoCuvee
@@ -104,7 +102,7 @@ contract CryptoCuveeTest is Test {
         vm.stopPrank();
     }
 
-    function testContractInit() public {
+    function testContractInit() public view {
         assertTrue(cryptoCuvee.hasRole(cryptoCuvee.SYSTEM_WALLET_ROLE(), address(systemWallet)));
     }
 
@@ -184,7 +182,7 @@ contract CryptoCuveeTest is Test {
         vm.stopPrank();
     }
 
-    function testSupportsInterface() public {
+    function testSupportsInterface() public view {
         bool isSupported = cryptoCuvee.supportsInterface(0x01ffc9a7);
         assertTrue(isSupported);
     }

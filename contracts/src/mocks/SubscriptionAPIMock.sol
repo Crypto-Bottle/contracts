@@ -351,9 +351,8 @@ abstract contract SubscriptionAPIMock is ConfirmedOwner, IERC677Receiver, IVRFSu
     function createSubscription() external override nonReentrant returns (uint256 subId) {
         // Generate a subscription id that is globally unique.
         uint64 currentSubNonce = s_currentSubNonce;
-        subId = uint256(
-            keccak256(abi.encodePacked(msg.sender, blockhash(block.number - 1), address(this), currentSubNonce))
-        );
+        subId = uint256(keccak256(abi.encodePacked(msg.sender, block.number, address(this), currentSubNonce)));
+
         // Increment the subscription nonce counter.
         s_currentSubNonce = currentSubNonce + 1;
         // Initialize storage variables.
