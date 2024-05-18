@@ -5,7 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {CryptoCuvee} from "../src/CryptoBottle.sol";
 import {MockERC20} from "../src/mocks/MockERC20.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
-import {MockVRFCoordinatorV2_5} from "../src/mocks/MockVRFCoordinatorV2_5.sol";
+import {VRFCoordinatorV2_5Mock} from "../src/mocks/MockVRFCoordinatorV2_5.sol";
 
 contract CryptoCuveeTest is Test {
     CryptoCuvee cryptoCuvee;
@@ -14,7 +14,7 @@ contract CryptoCuveeTest is Test {
     MockERC20 mockBTC;
     MockERC20 mockETH;
     MockERC20 mockLINK;
-    MockVRFCoordinatorV2_5 mockVRFCoordinator;
+    VRFCoordinatorV2_5Mock mockVRFCoordinator;
 
     address deployer;
     address systemWallet;
@@ -34,10 +34,10 @@ contract CryptoCuveeTest is Test {
         mockLINK = new MockERC20("Mock LINK", "mLINK");
 
         // Deploy MockVRFCoordinator
-        mockVRFCoordinator = new MockVRFCoordinatorV2_5(0x1);
+        mockVRFCoordinator = new VRFCoordinatorV2_5Mock(0, 0, 1e18);
 
         // Setup and fund subscription
-        uint64 subId = mockVRFCoordinator.createSubscription();
+        uint256 subId = mockVRFCoordinator.createSubscription();
         mockLINK.mint(deployer, 100_000_000 ether);
         mockLINK.approve(address(mockVRFCoordinator), 100_000_000 ether);
         mockVRFCoordinator.fundSubscription(subId, 100_000_000 ether);

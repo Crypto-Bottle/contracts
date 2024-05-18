@@ -34,7 +34,7 @@
     "coverage:forge:report": "forge coverage --report lcov --ir-minimum && lcov --extract lcov.info '*/CryptoBottle.sol' --output-file lcov.info && genhtml lcov.info --output-directory coverage",
     "test:hh": "npx hardhat test",
     "test:forge": "forge test -vvv --root . -C contracts/src --match-path \"contracts/test/*\" --out forge-artifacts --via-ir",
-    "compile": "npx hardhat compile && forge build --root . -C contracts/src --optimize --out forge-artifacts",
+    "compile": "npx hardhat compile && forge build --root . -C contracts/src --optimize --out forge-artifacts --via-ir",
     "size": "npx hardhat size-contracts",
     "xdeploy": "npx hardhat xdeploy",
     "abi": "npx hardhat export-abi",

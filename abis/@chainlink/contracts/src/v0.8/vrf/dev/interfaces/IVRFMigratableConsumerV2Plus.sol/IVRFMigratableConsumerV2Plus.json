@@ -1,0 +1,4 @@
+[
+  "event CoordinatorSet(address)",
+  "function setCoordinator(address)"
+]
