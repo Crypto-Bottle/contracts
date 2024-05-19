@@ -25,6 +25,7 @@
   "error InsufficientTokenBalance(address,uint256)",
   "error InvalidInitialization()",
   "error MaxQuantityReached()",
+  "error MintingClosed()",
   "error NotInitializing()",
   "error OnlyCoordinatorCanFulfill(address,address)",
   "error ReentrancyGuardReentrantCall()",
@@ -46,6 +47,7 @@
   "function UPGRADE_INTERFACE_VERSION() view returns (string)",
   "function approve(address,uint256)",
   "function balanceOf(address) view returns (uint256)",
+  "function closeMinting()",
   "function cryptoBottles(uint256) view returns (uint8, uint256)",
   "function getApproved(uint256) view returns (address)",
   "function getRoleAdmin(bytes32) view returns (bytes32)",
@@ -77,5 +79,6 @@
   "function totalSupply() view returns (uint256)",
   "function transferFrom(address,address,uint256)",
   "function upgradeToAndCall(address,bytes) payable",
-  "function usdc() view returns (address)"
+  "function usdc() view returns (address)",
+  "function withdrawUSDC()"
 ]

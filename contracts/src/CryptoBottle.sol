@@ -32,14 +32,10 @@ contract CryptoCuvee is
     VRFConsumerBaseV2Upgradeable
 {
     /**
-     * @dev Systel wallet role
-     */
-    bytes32 public constant SYSTEM_WALLET_ROLE = keccak256("SYSTEM_WALLET_ROLE");
-
-    /**
      * @dev Error messages for require statements
      */
     error InsufficientTokenBalance(address tokenAddress, uint256 tokenBalance);
+    error MintingClosed();
     error CategoryFullyMinted();
     error MaxQuantityReached();
     error BottleAlreadyOpened(uint256 tokenId);
@@ -90,6 +86,16 @@ contract CryptoCuvee is
         uint256 quantity;
         address to;
     }
+
+    /**
+     * @dev Systel wallet role
+     */
+    bytes32 public constant SYSTEM_WALLET_ROLE = keccak256("SYSTEM_WALLET_ROLE");
+
+    /**
+     * @dev Admin full close the minting
+     */
+    bool private mintingClosed;
 
     /**
      * @dev The Chainlink VRF coordinator address
@@ -204,6 +210,7 @@ contract CryptoCuvee is
         // Init System Wallet Role
         _grantRole(SYSTEM_WALLET_ROLE, systemWallet);
 
+        mintingClosed = false;
         usdc = _usdc;
         baseURI = _baseUri;
         // Initialize Chainlink VRF
@@ -287,6 +294,10 @@ contract CryptoCuvee is
      * @param _category The category type
      */
     function mint(address _to, uint32 _quantity, CategoryType _category) external payable nonReentrant {
+        if (mintingClosed) {
+            revert MintingClosed();
+        }
+
         // Only 3 NFTs can be minted per transaction use custom error
         if (_quantity > 3) {
             revert MaxQuantityReached();
@@ -305,13 +316,27 @@ contract CryptoCuvee is
         _requestRandomWords(_category, _quantity, _to);
     }
 
-    /** 
+    /**
      * @dev Whitdraw the USDC from the contract
      */
-    function withdrawUSDC() external onlyRole(DEFAULT_ADMIN_ROLE){
+    function withdrawUSDC() external onlyRole(DEFAULT_ADMIN_ROLE) {
         SafeERC20.safeTransfer(usdc, _msgSender(), usdc.balanceOf(address(this)));
     }
-    
+
+    /**
+     * @dev Close the minting of the NFTs and withdraw all remaining tokens
+     */
+    function closeMinting() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        mintingClosed = true;
+        for (uint256 i = 0; i < uniqueERC20TokenAddresses.length; i++) {
+            address tokenAddress = uniqueERC20TokenAddresses[i];
+            SafeERC20.safeTransfer(IERC20(tokenAddress), _msgSender(), IERC20(tokenAddress).balanceOf(address(this)));
+        }
+        if (address(this).balance > 0) {
+            payable(_msgSender()).transfer(address(this).balance);
+        }
+    }
+
     /**
      * @dev Set default royalty fee
      * @param _receiver The royalty fee
