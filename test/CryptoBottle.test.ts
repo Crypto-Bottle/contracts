@@ -171,12 +171,42 @@ describe("CryptoCuvee", () => {
       .setDefaultRoyalty(user1.address, 10);
   });
 
-  it("Should successfully mint with random fulfillment simulation from chainlink", async () => {
+  it("Should successfully mint with random fulfillment simulation from chainlink and withdrawal from deployer", async () => {
     await cryptoCuvee.connect(user1).mint(user1.address, 1, 1n);
     await mockVRFCoordinator.fulfillRandomWords(
       1n,
       await cryptoCuvee.getAddress(),
     );
+    await cryptoCuvee.connect(deployerAccount).withdrawUSDC();
+  });
+
+  it("Should revert if the role is not granted when withdrawUSDC", async () => {
+    await expect(
+      cryptoCuvee.connect(user1).withdrawUSDC(),
+    ).to.be.revertedWithCustomError(
+      cryptoCuvee,
+      "AccessControlUnauthorizedAccount",
+    );
+  });
+
+  it("Should revert if the role is not granted when closeMinting", async () => {
+    await expect(
+      cryptoCuvee.connect(user1).closeMinting(),
+    ).to.be.revertedWithCustomError(
+      cryptoCuvee,
+      "AccessControlUnauthorizedAccount",
+    );
+  });
+
+  it("Should close minting successfully", async () => {
+    await cryptoCuvee.connect(deployerAccount).closeMinting();
+    await expect(
+      cryptoCuvee.connect(user1).mint(user1.address, 1, 1n),
+    ).to.be.revertedWithCustomError(cryptoCuvee, "MintingClosed");
+
+    // Check that no remaining balance is left mBTC and mETH
+    expect(await mockBTC.balanceOf(await cryptoCuvee.getAddress())).to.equal(0);
+    expect(await mockETH.balanceOf(await cryptoCuvee.getAddress())).to.equal(0);
   });
 
   it("Should revert if the quantity to be mint is more than 3", async () => {

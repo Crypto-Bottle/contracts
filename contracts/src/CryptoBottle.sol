@@ -332,9 +332,6 @@ contract CryptoCuvee is
             address tokenAddress = uniqueERC20TokenAddresses[i];
             SafeERC20.safeTransfer(IERC20(tokenAddress), _msgSender(), IERC20(tokenAddress).balanceOf(address(this)));
         }
-        if (address(this).balance > 0) {
-            payable(_msgSender()).transfer(address(this).balance);
-        }
     }
 
     /**

@@ -153,6 +153,65 @@ contract CryptoCuveeTest is Test {
         vm.stopPrank();
     }
 
+    function testMintWithRandomFulfillmentAndWithdraw() public {
+        // Mint some USDC for user1 and set approval
+        vm.startPrank(user1);
+        mockUSDC.mint(user1, 100 ether); 
+        mockUSDC.approve(address(cryptoCuvee), 100 ether);
+        // Mint a CryptoBottle
+        cryptoCuvee.mint(user1, 1, CryptoCuvee.CategoryType.ROUGE);
+        // Fulfill random words request
+        mockVRFCoordinator.fulfillRandomWords(1, address(cryptoCuvee));
+        vm.stopPrank();
+
+        // Withdraw USDC as deployer
+        vm.startPrank(deployer);
+        cryptoCuvee.withdrawUSDC();
+        vm.stopPrank();
+    }
+
+    function testRevertWithdrawUSDCWithoutRole() public {
+        vm.startPrank(user1);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                user1,
+                cryptoCuvee.DEFAULT_ADMIN_ROLE()
+            )
+        );
+        cryptoCuvee.withdrawUSDC();
+        vm.stopPrank();
+    }
+
+    function testRevertCloseMintingWithoutRole() public {
+        vm.startPrank(user1);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                user1,
+                cryptoCuvee.DEFAULT_ADMIN_ROLE()
+            )
+        );
+        cryptoCuvee.closeMinting();
+        vm.stopPrank();
+    }
+
+    function testCloseMintingSuccessfully() public {
+        vm.startPrank(deployer);
+        cryptoCuvee.closeMinting();
+        vm.stopPrank();
+
+        // Try minting again and expect revert
+        vm.startPrank(user1);
+        vm.expectRevert(abi.encodeWithSelector(CryptoCuvee.MintingClosed.selector));
+        cryptoCuvee.mint(user1, 1, CryptoCuvee.CategoryType.ROUGE);
+        vm.stopPrank();
+
+        // Check remaining balances
+        assertEq(mockBTC.balanceOf(address(cryptoCuvee)), 0);
+        assertEq(mockETH.balanceOf(address(cryptoCuvee)), 0);
+    }
+
     function testTokenURI() public {
         vm.startPrank(user1);
         // Set allowances and mint tokens
