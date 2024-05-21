@@ -165,6 +165,11 @@ contract CryptoCuvee is
     event CryptoBottleCreated(address indexed to, uint256 indexed tokenId, uint256 cryptoBottleIndex);
 
     /**
+     * @dev Gap for upgrade safety
+     */
+    uint256[49] __gap;
+
+    /**
      * @dev See {IERC165-supportsInterface}.
      */
     function supportsInterface(
