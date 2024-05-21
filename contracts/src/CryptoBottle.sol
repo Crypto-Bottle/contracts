@@ -200,7 +200,7 @@ contract CryptoCuvee is
         uint32 _callbackGasLimit,
         uint16 _requestConfirmations,
         uint256 subscriptionId
-    ) public payable initializer {
+    ) public initializer {
         __ERC721_init("CryptoCuvee", "CCV");
         __VRFConsumerBaseV2Upgradeable_init(vrfCoordinator);
 
@@ -293,7 +293,7 @@ contract CryptoCuvee is
      * @param _quantity The quantity to mint
      * @param _category The category type
      */
-    function mint(address _to, uint32 _quantity, CategoryType _category) external payable nonReentrant {
+    function mint(address _to, uint32 _quantity, CategoryType _category) external nonReentrant {
         if (mintingClosed) {
             revert MintingClosed();
         }

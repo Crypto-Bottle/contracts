@@ -70,6 +70,7 @@ describe("CryptoCuvee", () => {
         price: 10n,
         isLinked: false,
         tokens: [
+
           {
             name: "mBTC",
             tokenAddress: await mockBTC.getAddress(),
