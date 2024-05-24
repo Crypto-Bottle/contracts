@@ -1,11 +1,11 @@
-// SPDX-License-Identifier: Unlicense
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
 import {Test} from "forge-std/Test.sol";
 import {CryptoCuvee} from "../src/CryptoBottle.sol";
 import {MockERC20} from "../src/mocks/MockERC20.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
-import {VRFCoordinatorV2Mock} from "../src/mocks/MockVRFCoordinator.sol";
+import {VRFCoordinatorV2_5Mock} from "../src/mocks/MockVRFCoordinatorV2_5.sol";
 
 contract CryptoCuveeTest is Test {
     CryptoCuvee cryptoCuvee;
@@ -14,7 +14,7 @@ contract CryptoCuveeTest is Test {
     MockERC20 mockBTC;
     MockERC20 mockETH;
     MockERC20 mockLINK;
-    VRFCoordinatorV2Mock mockVRFCoordinator;
+    VRFCoordinatorV2_5Mock mockVRFCoordinator;
 
     address deployer;
     address systemWallet;
@@ -34,12 +34,10 @@ contract CryptoCuveeTest is Test {
         mockLINK = new MockERC20("Mock LINK", "mLINK");
 
         // Deploy MockVRFCoordinator
-        mockVRFCoordinator = new VRFCoordinatorV2Mock(1, 1);
+        mockVRFCoordinator = new VRFCoordinatorV2_5Mock(1 ether, 1 ether, 1 ether);
 
         // Setup and fund subscription
-        uint64 subId = mockVRFCoordinator.createSubscription();
-        mockLINK.mint(deployer, 100_000_000 ether);
-        mockLINK.approve(address(mockVRFCoordinator), 100_000_000 ether);
+        uint256 subId = mockVRFCoordinator.createSubscription();
         mockVRFCoordinator.fundSubscription(subId, 100_000_000 ether);
 
         // Deploy CryptoCuvee
@@ -89,9 +87,7 @@ contract CryptoCuveeTest is Test {
         bottles[0].tokens[0] = CryptoCuvee.Token({name: "mBTC", tokenAddress: address(mockBTC), quantity: 3 ether});
         bottles[0].tokens[1] = CryptoCuvee.Token({name: "mETH", tokenAddress: address(mockETH), quantity: 7 ether});
 
-         vm.expectRevert(
-            abi.encodeWithSelector(CryptoCuvee.InsufficientTokenBalance.selector,  address(mockBTC), 0)
-        );
+        vm.expectRevert(abi.encodeWithSelector(CryptoCuvee.InsufficientTokenBalance.selector, address(mockBTC), 0));
         cryptoCuvee2.initialize(
             mockUSDC,
             bottles,
@@ -152,11 +148,68 @@ contract CryptoCuveeTest is Test {
         cryptoCuvee.mint(user1, 1, CryptoCuvee.CategoryType.ROUGE);
         mockVRFCoordinator.fulfillRandomWords(1, address(cryptoCuvee));
         cryptoCuvee.openBottle(1);
-        vm.expectRevert(
-            abi.encodeWithSelector(CryptoCuvee.BottleAlreadyOpened.selector, 1)
-        );
+        vm.expectRevert(abi.encodeWithSelector(CryptoCuvee.BottleAlreadyOpened.selector, 1));
         cryptoCuvee.openBottle(1);
         vm.stopPrank();
+    }
+
+    function testMintWithRandomFulfillmentAndWithdraw() public {
+        // Mint some USDC for user1 and set approval
+        vm.startPrank(user1);
+        mockUSDC.mint(user1, 100 ether); 
+        mockUSDC.approve(address(cryptoCuvee), 100 ether);
+        // Mint a CryptoBottle
+        cryptoCuvee.mint(user1, 1, CryptoCuvee.CategoryType.ROUGE);
+        // Fulfill random words request
+        mockVRFCoordinator.fulfillRandomWords(1, address(cryptoCuvee));
+        vm.stopPrank();
+
+        // Withdraw USDC as deployer
+        vm.startPrank(deployer);
+        cryptoCuvee.withdrawUSDC();
+        vm.stopPrank();
+    }
+
+    function testRevertWithdrawUSDCWithoutRole() public {
+        vm.startPrank(user1);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                user1,
+                cryptoCuvee.DEFAULT_ADMIN_ROLE()
+            )
+        );
+        cryptoCuvee.withdrawUSDC();
+        vm.stopPrank();
+    }
+
+    function testRevertCloseMintingWithoutRole() public {
+        vm.startPrank(user1);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                user1,
+                cryptoCuvee.DEFAULT_ADMIN_ROLE()
+            )
+        );
+        cryptoCuvee.closeMinting();
+        vm.stopPrank();
+    }
+
+    function testCloseMintingSuccessfully() public {
+        vm.startPrank(deployer);
+        cryptoCuvee.closeMinting();
+        vm.stopPrank();
+
+        // Try minting again and expect revert
+        vm.startPrank(user1);
+        vm.expectRevert(abi.encodeWithSelector(CryptoCuvee.MintingClosed.selector));
+        cryptoCuvee.mint(user1, 1, CryptoCuvee.CategoryType.ROUGE);
+        vm.stopPrank();
+
+        // Check remaining balances
+        assertEq(mockBTC.balanceOf(address(cryptoCuvee)), 0);
+        assertEq(mockETH.balanceOf(address(cryptoCuvee)), 0);
     }
 
     function testTokenURI() public {

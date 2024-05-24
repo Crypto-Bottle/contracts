@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
-pragma abicoder v2;
 
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {ERC721Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import {ERC721EnumerableUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 import {ERC721RoyaltyUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721RoyaltyUpgradeable.sol";
-import {VRFCoordinatorV2Interface} from "./VRFCoordinatorV2Interface.sol";
+import {IVRFCoordinatorV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/interfaces/IVRFCoordinatorV2Plus.sol";
+import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {VRFConsumerBaseV2Upgradeable} from "./VRFConsumerBaseV2Upgradeable.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -31,14 +31,10 @@ contract CryptoCuvee is
     VRFConsumerBaseV2Upgradeable
 {
     /**
-     * @dev Systel wallet role
-     */
-    bytes32 public constant SYSTEM_WALLET_ROLE = keccak256("SYSTEM_WALLET_ROLE");
-
-    /**
      * @dev Error messages for require statements
      */
     error InsufficientTokenBalance(address tokenAddress, uint256 tokenBalance);
+    error MintingClosed();
     error CategoryFullyMinted();
     error MaxQuantityReached();
     error BottleAlreadyOpened(uint256 tokenId);
@@ -91,9 +87,19 @@ contract CryptoCuvee is
     }
 
     /**
+     * @dev Systel wallet role
+     */
+    bytes32 public constant SYSTEM_WALLET_ROLE = keccak256("SYSTEM_WALLET_ROLE");
+
+    /**
+     * @dev Admin full close the minting
+     */
+    bool private mintingClosed;
+
+    /**
      * @dev The Chainlink VRF coordinator address
      */
-    VRFCoordinatorV2Interface private coordinator;
+    IVRFCoordinatorV2Plus private coordinator;
     /**
      * @dev The key hash for the Chainlink VRF
      */
@@ -109,7 +115,7 @@ contract CryptoCuvee is
     /**
      * @dev The subscription ID for the Chainlink VRF
      */
-    uint64 private s_subscriptionId;
+    uint256 private s_subscriptionId;
 
     mapping(uint256 => RandomRequestData) private randomnessRequestData;
 
@@ -159,6 +165,11 @@ contract CryptoCuvee is
     event CryptoBottleCreated(address indexed to, uint256 indexed tokenId, uint256 cryptoBottleIndex);
 
     /**
+     * @dev Gap for upgrade safety
+     */
+    uint256[49] __gap;
+
+    /**
      * @dev See {IERC165-supportsInterface}.
      */
     function supportsInterface(
@@ -192,8 +203,8 @@ contract CryptoCuvee is
         bytes32 _keyHash,
         uint32 _callbackGasLimit,
         uint16 _requestConfirmations,
-        uint64 subscriptionId
-    ) public payable initializer {
+        uint256 subscriptionId
+    ) public initializer {
         __ERC721_init("CryptoCuvee", "CCV");
         __VRFConsumerBaseV2Upgradeable_init(vrfCoordinator);
 
@@ -203,10 +214,11 @@ contract CryptoCuvee is
         // Init System Wallet Role
         _grantRole(SYSTEM_WALLET_ROLE, systemWallet);
 
+        mintingClosed = false;
         usdc = _usdc;
         baseURI = _baseUri;
         // Initialize Chainlink VRF
-        coordinator = VRFCoordinatorV2Interface(vrfCoordinator);
+        coordinator = IVRFCoordinatorV2Plus(vrfCoordinator);
         keyHash = _keyHash;
         callbackGasLimit = _callbackGasLimit;
         requestConfirmations = _requestConfirmations;
@@ -285,7 +297,11 @@ contract CryptoCuvee is
      * @param _quantity The quantity to mint
      * @param _category The category type
      */
-    function mint(address _to, uint32 _quantity, CategoryType _category) external payable nonReentrant {
+    function mint(address _to, uint32 _quantity, CategoryType _category) external nonReentrant {
+        if (mintingClosed) {
+            revert MintingClosed();
+        }
+
         // Only 3 NFTs can be minted per transaction use custom error
         if (_quantity > 3) {
             revert MaxQuantityReached();
@@ -302,6 +318,24 @@ contract CryptoCuvee is
         }
 
         _requestRandomWords(_category, _quantity, _to);
+    }
+
+    /**
+     * @dev Whitdraw the USDC from the contract
+     */
+    function withdrawUSDC() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        SafeERC20.safeTransfer(usdc, _msgSender(), usdc.balanceOf(address(this)));
+    }
+
+    /**
+     * @dev Close the minting of the NFTs and withdraw all remaining tokens
+     */
+    function closeMinting() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        mintingClosed = true;
+        for (uint256 i = 0; i < uniqueERC20TokenAddresses.length; i++) {
+            address tokenAddress = uniqueERC20TokenAddresses[i];
+            SafeERC20.safeTransfer(IERC20(tokenAddress), _msgSender(), IERC20(tokenAddress).balanceOf(address(this)));
+        }
     }
 
     /**
@@ -357,11 +391,14 @@ contract CryptoCuvee is
      */
     function _requestRandomWords(CategoryType categoryType, uint32 _quantity, address _to) internal {
         uint256 requestId = coordinator.requestRandomWords(
-            keyHash,
-            s_subscriptionId,
-            requestConfirmations,
-            callbackGasLimit,
-            _quantity
+            VRFV2PlusClient.RandomWordsRequest({
+                keyHash: keyHash,
+                subId: s_subscriptionId,
+                requestConfirmations: requestConfirmations,
+                callbackGasLimit: callbackGasLimit,
+                numWords: _quantity,
+                extraArgs: VRFV2PlusClient._argsToBytes(VRFV2PlusClient.ExtraArgsV1({nativePayment: false}))
+            })
         );
 
         RandomRequestData memory randomRequestData = RandomRequestData({

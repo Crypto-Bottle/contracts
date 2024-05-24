@@ -1,0 +1,14 @@
+[
+  "error OnlyCoordinatorCanFulfill(address,address)",
+  "error OnlyOwnerOrCoordinator(address,address,address)",
+  "error ZeroAddress()",
+  "event CoordinatorSet(address)",
+  "event OwnershipTransferRequested(address indexed,address indexed)",
+  "event OwnershipTransferred(address indexed,address indexed)",
+  "function acceptOwnership()",
+  "function owner() view returns (address)",
+  "function rawFulfillRandomWords(uint256,uint256[])",
+  "function s_vrfCoordinator() view returns (address)",
+  "function setCoordinator(address)",
+  "function transferOwnership(address)"
+]
