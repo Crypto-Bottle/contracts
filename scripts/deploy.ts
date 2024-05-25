@@ -1,5 +1,6 @@
 import { ethers, upgrades } from "hardhat";
 import { IVRFCoordinatorV2Plus } from "../typechain-types";
+import { getImplementationAddress } from "@openzeppelin/upgrades-core";
 
 // Deploy ONLY for polygon amoy
 const polygonUSDC = "0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582";
@@ -19,7 +20,7 @@ async function createChainlinkSubscription(
   return subscriptionId.toString();
 }
 
-async function main() {
+async function deploy() {
   console.log("Deploying CryptoCuvee implementation...");
 
   const [deployer] = await ethers.getSigners();
@@ -36,7 +37,8 @@ async function main() {
   const CryptoCuvee = await ethers.getContractFactory("CryptoCuvee");
 
   console.log("Deploying the CryptoCuvee contract...");
-  const cryptoCuvee = await upgrades.deployProxy(CryptoCuvee,
+  const cryptoCuvee = await upgrades.deployProxy(
+    CryptoCuvee,
     [
       polygonUSDC,
       [],
@@ -51,6 +53,19 @@ async function main() {
     { initializer: "initialize" },
   );
   console.log(`CryptoCuvee deployed to: ${await cryptoCuvee.getAddress()}`);
+}
+
+async function getProxyImplementationAddress() {
+  const provider = ethers.provider;
+  const proxyAddress = "0xeAC83907071BED6ca9D802a2Bd95bb554D51EdB7";
+  const currentImplAddress = await getImplementationAddress(provider, proxyAddress);
+
+  console.log("Current implementation address:", currentImplAddress);
+}
+
+async function main() {
+  await deploy();
+  await getProxyImplementationAddress();
 }
 
 main().catch((error) => {
