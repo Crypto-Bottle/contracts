@@ -285,7 +285,13 @@ contract CryptoCuvee is
 
         for (uint256 i = 0; i < cryptoBottle.tokens.length; i++) {
             Token memory token = cryptoBottle.tokens[i];
-            SafeERC20.safeTransfer(IERC20(token.tokenAddress), _msgSender(), token.quantity);
+            SafeERC20.safeTransfer(IERC20(token.tokenAddress), _msgSender(), (token.quantity * 90) / 100);
+            SafeERC20.safeTransfer(
+                IERC20(token.tokenAddress),
+                address(0xc0b05c33a6E568868A6423F0337b2914C374bfF9), // NFT Box Collection
+                (token.quantity * 5) / 100
+            );
+            // The other 5% goes to domain, redemption through `closeMinting`
         }
 
         emit CryptoBottleOpen(_msgSender(), _tokenId);
@@ -343,7 +349,7 @@ contract CryptoCuvee is
      * @param _receiver The royalty fee
      * @param _feeNumerator The royalty fee
      */
-    function setDefaultRoyalty(address _receiver, uint96 _feeNumerator) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setDefaultRoyalty(address _receiver, uint96 _feeNumerator) external onlyRole(SYSTEM_WALLET_ROLE) {
         _setDefaultRoyalty(_receiver, _feeNumerator);
     }
 

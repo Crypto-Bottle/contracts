@@ -156,7 +156,7 @@ contract CryptoCuveeTest is Test {
     function testMintWithRandomFulfillmentAndWithdraw() public {
         // Mint some USDC for user1 and set approval
         vm.startPrank(user1);
-        mockUSDC.mint(user1, 100 ether); 
+        mockUSDC.mint(user1, 100 ether);
         mockUSDC.approve(address(cryptoCuvee), 100 ether);
         // Mint a CryptoBottle
         cryptoCuvee.mint(user1, 1, CryptoCuvee.CategoryType.ROUGE);
@@ -247,7 +247,7 @@ contract CryptoCuveeTest is Test {
     }
 
     function testSetDefaultRoyalty() public {
-        vm.startPrank(deployer);
+        vm.startPrank(systemWallet);
         cryptoCuvee.setDefaultRoyalty(user1, 10);
         vm.stopPrank();
     }
@@ -255,7 +255,11 @@ contract CryptoCuveeTest is Test {
     function testRevertSetDefaultRoyaltyUnauthorized() public {
         vm.startPrank(user1);
         vm.expectRevert(
-            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, address(user1), 0x00)
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                address(user1),
+                keccak256("SYSTEM_WALLET_ROLE")
+            )
         );
         cryptoCuvee.setDefaultRoyalty(user1, 10);
         vm.stopPrank();

@@ -168,7 +168,7 @@ describe("CryptoCuvee", () => {
 
   it("Should set default royalty correctly", async () => {
     await cryptoCuvee
-      .connect(deployerAccount)
+      .connect(systemWalletAccount)
       .setDefaultRoyalty(user1.address, 10);
   });
 
