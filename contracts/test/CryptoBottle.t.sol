@@ -5,11 +5,13 @@ import {Test} from "forge-std/Test.sol";
 import {CryptoCuvee} from "../src/CryptoBottle.sol";
 import {MockERC20} from "../src/mocks/MockERC20.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {VRFCoordinatorV2_5Mock} from "../src/mocks/MockVRFCoordinatorV2_5.sol";
 
 contract CryptoCuveeTest is Test {
     CryptoCuvee cryptoCuvee;
     CryptoCuvee cryptoCuvee2;
+    ERC1967Proxy proxy;
     MockERC20 mockUSDC;
     MockERC20 mockBTC;
     MockERC20 mockETH;
@@ -42,6 +44,7 @@ contract CryptoCuveeTest is Test {
 
         // Deploy CryptoCuvee
         cryptoCuvee = new CryptoCuvee();
+        proxy = new ERC1967Proxy(address(cryptoCuvee), "");
         CryptoCuvee.CryptoBottle[] memory bottles = new CryptoCuvee.CryptoBottle[](1);
         bottles[0] = CryptoCuvee.CryptoBottle({
             categoryType: CryptoCuvee.CategoryType.ROUGE,
@@ -52,12 +55,14 @@ contract CryptoCuveeTest is Test {
         bottles[0].tokens[1] = CryptoCuvee.Token({name: "mETH", tokenAddress: address(mockETH), quantity: 7 ether});
 
         // Mint mock tokens
-        mockBTC.mint(deployer, 100 ether);
-        mockETH.mint(deployer, 100 ether);
+        mockBTC.mint(deployer, 200 ether);
+        mockETH.mint(deployer, 200 ether);
 
         // Approve mock tokens
         mockBTC.approve(address(cryptoCuvee), 100 ether);
         mockETH.approve(address(cryptoCuvee), 100 ether);
+        mockBTC.approve(address(proxy), 100 ether);
+        mockETH.approve(address(proxy), 100 ether);
 
         cryptoCuvee.initialize(
             mockUSDC,
@@ -73,6 +78,18 @@ contract CryptoCuveeTest is Test {
 
         // Add cryptoCuvee as a consumer
         mockVRFCoordinator.addConsumer(subId, address(cryptoCuvee));
+
+        CryptoCuvee(address(proxy)).initialize(
+            mockUSDC,
+            bottles,
+            "https://test.com/",
+            systemWallet,
+            address(mockVRFCoordinator),
+            keccak256(abi.encodePacked("keyHash_example")),
+            2000000,
+            1,
+            subId
+        );
     }
 
     function testRedployCryptoCuveeWithoutTokens() public {
@@ -125,7 +142,9 @@ contract CryptoCuveeTest is Test {
         // Set allowances and mint tokens
         mockUSDC.mint(user1, 100 ether);
         mockUSDC.approve(address(cryptoCuvee), 100 ether);
-        cryptoCuvee.mint(user1, 1, CryptoCuvee.CategoryType.ROUGE);
+        uint256 requestId = cryptoCuvee.mint(user1, 1, CryptoCuvee.CategoryType.ROUGE);
+        // Return RequestId should be 1
+        assertEq(requestId, 1);
         vm.stopPrank();
     }
 
@@ -252,13 +271,23 @@ contract CryptoCuveeTest is Test {
         vm.stopPrank();
     }
 
+    function testUpgradeToAndCall() public {
+        vm.startPrank(deployer);
+        cryptoCuvee2 = new CryptoCuvee();
+        (bool success, ) = address(proxy).call(
+            abi.encodeWithSignature("upgradeToAndCall(address,bytes)", address(cryptoCuvee2), "")
+        );
+        require(success, "Upgrade failed");
+        vm.stopPrank();
+    }
+
     function testRevertSetDefaultRoyaltyUnauthorized() public {
         vm.startPrank(user1);
         vm.expectRevert(
             abi.encodeWithSelector(
                 IAccessControl.AccessControlUnauthorizedAccount.selector,
                 address(user1),
-                keccak256("SYSTEM_WALLET_ROLE")
+                cryptoCuvee.SYSTEM_WALLET_ROLE()
             )
         );
         cryptoCuvee.setDefaultRoyalty(user1, 10);

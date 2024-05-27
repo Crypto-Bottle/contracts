@@ -162,7 +162,12 @@ contract CryptoCuvee is
     /**
      * @dev The CryptoBottle's created event
      */
-    event CryptoBottleCreated(address indexed to, uint256 indexed tokenId, uint256 cryptoBottleIndex);
+    event CryptoBottleCreated(
+        address indexed to,
+        uint256 indexed tokenId,
+        uint256 cryptoBottleIndex,
+        uint256 requestId
+    );
 
     /**
      * @dev Gap for upgrade safety
@@ -302,8 +307,9 @@ contract CryptoCuvee is
      * @param _to The address to mint to
      * @param _quantity The quantity to mint
      * @param _category The category type
+     * @return requestId The request ID
      */
-    function mint(address _to, uint32 _quantity, CategoryType _category) external nonReentrant {
+    function mint(address _to, uint32 _quantity, CategoryType _category) external nonReentrant returns (uint256) {
         if (mintingClosed) {
             revert MintingClosed();
         }
@@ -323,7 +329,7 @@ contract CryptoCuvee is
             SafeERC20.safeTransferFrom(usdc, _msgSender(), address(this), cryptoBottle.price * _quantity);
         }
 
-        _requestRandomWords(_category, _quantity, _to);
+        return _requestRandomWords(_category, _quantity, _to);
     }
 
     /**
@@ -363,8 +369,9 @@ contract CryptoCuvee is
      * @param _category The category type
      * @param _random The random value
      * @param _to The address to mint to
+     * @param _requestId The request ID
      */
-    function _invest(CategoryType _category, uint256 _random, address _to) internal {
+    function _invest(CategoryType _category, uint256 _random, address _to, uint256 _requestId) internal {
         uint256[] storage unclaimedTokens = unclaimedBottlesByCategory[_category];
 
         if (unclaimedTokens.length == 0) {
@@ -386,7 +393,7 @@ contract CryptoCuvee is
         tokenToCryptoBottle[tokenId] = selectedTokenId;
 
         // Emit CryptoBottleCreated event
-        emit CryptoBottleCreated(_to, tokenId, selectedTokenId);
+        emit CryptoBottleCreated(_to, tokenId, selectedTokenId, _requestId);
     }
 
     /**
@@ -394,8 +401,13 @@ contract CryptoCuvee is
      * @param categoryType The category type
      * @param _quantity The quantity to mint
      * @param _to The address to mint to
+     * @return _requestId The request ID
      */
-    function _requestRandomWords(CategoryType categoryType, uint32 _quantity, address _to) internal {
+    function _requestRandomWords(
+        CategoryType categoryType,
+        uint32 _quantity,
+        address _to
+    ) internal returns (uint256 _requestId) {
         uint256 requestId = coordinator.requestRandomWords(
             VRFV2PlusClient.RandomWordsRequest({
                 keyHash: keyHash,
@@ -415,6 +427,8 @@ contract CryptoCuvee is
         //console.log("Request ID: %d", requestId);
         // Store the randomness request data
         randomnessRequestData[requestId] = randomRequestData;
+
+        return requestId;
     }
 
     /**
@@ -432,7 +446,7 @@ contract CryptoCuvee is
             // Shift right and apply mask, then add the index to ensure it's always non-zero and unique.
             uint256 uniqueRandom = ((randomWord >> (16 * i)) & mask) + i;
 
-            _invest(requestData.categoryType, uniqueRandom, requestData.to);
+            _invest(requestData.categoryType, uniqueRandom, requestData.to, requestId);
         }
 
         delete randomnessRequestData[requestId];
