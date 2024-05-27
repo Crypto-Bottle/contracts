@@ -1,6 +1,5 @@
-import { ethers, upgrades } from "hardhat";
+import { ethers } from "hardhat";
 import { IVRFCoordinatorV2Plus } from "../typechain-types";
-import { getImplementationAddress } from "@openzeppelin/upgrades-core";
 
 // Deploy ONLY for polygon amoy
 const polygonUSDC = "0x677Cf65f71Bf80fFa5D77Dc35EF85624DAa05f0c"; // Custom ERC20 to test
@@ -22,55 +21,45 @@ export async function createChainlinkSubscription(
   return subscriptionId.toString();
 }
 
-async function deploy() {
+async function deployImplementation() {
   console.log("Deploying CryptoCuvee implementation...");
   /*
-  const [deployer] = await ethers.getSigners();
-  const vrfCoordinator = await ethers.getContractAt(
-    "IVRFCoordinatorV2Plus",
-    vrfCoordinatorAddress,
-    deployer,
-  );
+    const [deployer] = await ethers.getSigners();
+    const vrfCoordinator = await ethers.getContractAt(
+      "IVRFCoordinatorV2Plus",
+      vrfCoordinatorAddress,
+      deployer,
+    );
 
-  console.log("Creating Chainlink subscription...");
-  const subId = await createChainlinkSubscription(vrfCoordinator);
-  console.log("Chainlink subscription created with subId:", subId);
-*/
+    console.log("Creating Chainlink subscription...");
+    const subId = await createChainlinkSubscription(vrfCoordinator);
+    console.log("Chainlink subscription created with subId:", subId);
+  */
   const CryptoCuvee = await ethers.getContractFactory("CryptoCuvee");
 
-  console.log("Deploying the CryptoCuvee contract...");
-  const cryptoCuvee = await upgrades.deployProxy(
-    CryptoCuvee,
-    [
-      polygonUSDC,
-      [],
-      "https://app.cryptobottle.fr/api/metadata/",
-      systemWallet,
-      coordinator,
-      ethers.keccak256(ethers.toUtf8Bytes("CryptoBottleHash")),
-      2000000,
-      1,
-      subId,
-    ],
-    { initializer: "initialize" },
-  );
-  console.log(`CryptoCuvee Proxy deployed to: ${await cryptoCuvee.getAddress()}`);
-}
+  console.log("Deploying the CryptoCuvee Implementation contract...");
+  const cryptoCuvee = await CryptoCuvee.deploy();
 
-async function getProxyImplementationAddress() {
-  const provider = ethers.provider;
-  const proxyAddress = "0xeAC83907071BED6ca9D802a2Bd95bb554D51EdB7";
-  const currentImplAddress = await getImplementationAddress(
-    provider,
-    proxyAddress,
+  // Prevent contract from being initialized again
+  await cryptoCuvee.initialize(
+    polygonUSDC,
+    [],
+    "https://app.cryptobottle.fr/api/metadata/",
+    systemWallet,
+    coordinator,
+    ethers.keccak256(ethers.toUtf8Bytes("CryptoBottleHash")),
+    2000000,
+    1,
+    subId,
   );
 
-  console.log("Current implementation address:", currentImplAddress);
+  console.log(
+    `CryptoCuvee Implementation deployed to: ${await cryptoCuvee.getAddress()}`,
+  );
 }
 
 async function main() {
-  await deploy();
-  await getProxyImplementationAddress();
+  await deployImplementation();
 }
 
 main().catch((error) => {

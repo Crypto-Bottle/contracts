@@ -750,10 +750,18 @@ const config: HardhatUserConfig = {
       // For Manta testnet & mainnet
       manta: vars.get("MANTA_API_KEY", ""),
       mantaTestnet: vars.get("MANTA_API_KEY", ""),
-      // For Arthera testnet
+      // For Arthera testnet²
       artheraTestnet: vars.get("ARTHERA_API_KEY", ""),
     },
     customChains: [
+      {
+        network: "polygonAmoy",
+        chainId: 80002,
+        urls: {
+          apiURL: "https://www.oklink.com/api/explorer/v1/contract/verify/async/api/polygonAmoy",
+          browserURL: "https://www.oklink.com/polygonAmoy"
+        },
+      },
       {
         network: "holesky",
         chainId: 17000,
