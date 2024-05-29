@@ -314,6 +314,10 @@ contract CryptoCuvee is
             revert MintingClosed();
         }
 
+        if (_quantity == 0) {
+            revert("Quantity must be greater than 0");
+        }
+
         // Only 3 NFTs can be minted per transaction use custom error
         if (_quantity > 3) {
             revert MaxQuantityReached();
