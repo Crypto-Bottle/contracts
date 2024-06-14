@@ -348,10 +348,23 @@ contract CryptoCuvee is
      */
     function closeMinting() external onlyRole(DEFAULT_ADMIN_ROLE) {
         mintingClosed = true;
+
+        // TODO: open all remaining bottles
+
         for (uint256 i = 0; i < uniqueERC20TokenAddresses.length; i++) {
             address tokenAddress = uniqueERC20TokenAddresses[i];
             SafeERC20.safeTransfer(IERC20(tokenAddress), _msgSender(), IERC20(tokenAddress).balanceOf(address(this)));
         }
+    }
+
+    /**
+     * @dev Get the tokens of a specific CryptoBottle from tokenId
+     * @param tokenId The index of the CryptoBottle in the array
+     * @return tokens The array of Token structs
+     */
+    function getCryptoBottleTokens(uint256 tokenId) external view returns (Token[] memory) {
+        uint256 cryptoBottleIndex = tokenToCryptoBottle[tokenId];
+        return cryptoBottles[cryptoBottleIndex].tokens;
     }
 
     /**
