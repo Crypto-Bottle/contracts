@@ -203,8 +203,28 @@ describe("CryptoCuvee", () => {
     await expect(
       cryptoCuvee.connect(user1).mint(user1.address, 1, 1n),
     ).to.be.revertedWithCustomError(cryptoCuvee, "MintingClosed");
+  });
 
-    // Check that no remaining balance is left mBTC and mETH
+  it("Should revert when there is still open bottle to whitdraw all tokens", async () => {
+    await cryptoCuvee.connect(user1).mint(user1.address, 1, 1n);
+    await mockVRFCoordinator.fulfillRandomWords(
+      1n,
+      await cryptoCuvee.getAddress(),
+    );
+    await expect(
+      cryptoCuvee.connect(deployerAccount).withdrawAllTokens(),
+    ).to.be.revertedWithCustomError(cryptoCuvee, "BottlesNotAllOpened");
+  });
+
+  it("Should whidraw all tokens successfully", async () => {
+    await cryptoCuvee.connect(user1).mint(user1.address, 1, 1n);
+    await mockVRFCoordinator.fulfillRandomWords(
+      1n,
+      await cryptoCuvee.getAddress(),
+    );
+    await cryptoCuvee.connect(user1).openBottle(1);
+    await cryptoCuvee.connect(deployerAccount).withdrawAllTokens();
+
     expect(await mockBTC.balanceOf(await cryptoCuvee.getAddress())).to.equal(0);
     expect(await mockETH.balanceOf(await cryptoCuvee.getAddress())).to.equal(0);
   });

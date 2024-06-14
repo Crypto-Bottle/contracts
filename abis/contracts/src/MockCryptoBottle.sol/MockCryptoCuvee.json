@@ -4,6 +4,7 @@
   "error AddressEmptyCode(address)",
   "error AddressInsufficientBalance(address)",
   "error BottleAlreadyOpened(uint256)",
+  "error BottlesNotAllOpened()",
   "error CategoryFullyMinted()",
   "error ERC1967InvalidImplementation(address)",
   "error ERC1967NonPayable()",
@@ -28,6 +29,7 @@
   "error MintingClosed()",
   "error NotInitializing()",
   "error OnlyCoordinatorCanFulfill(address,address)",
+  "error QuantityMustBeGreaterThanZero()",
   "error ReentrancyGuardReentrantCall()",
   "error SafeERC20FailedOperation(address)",
   "error UUPSUnauthorizedCallContext()",
@@ -81,5 +83,6 @@
   "function transferFrom(address,address,uint256)",
   "function upgradeToAndCall(address,bytes) payable",
   "function usdc() view returns (address)",
+  "function withdrawAllTokens()",
   "function withdrawUSDC()"
 ]

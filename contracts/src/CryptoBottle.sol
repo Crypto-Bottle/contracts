@@ -39,6 +39,7 @@ contract CryptoCuvee is
     error MaxQuantityReached();
     error BottleAlreadyOpened(uint256 tokenId);
     error QuantityMustBeGreaterThanZero();
+    error BottlesNotAllOpened();
 
     /**
      * @dev The USDC token address
@@ -345,16 +346,27 @@ contract CryptoCuvee is
     }
 
     /**
-     * @dev Close the minting of the NFTs and withdraw all remaining tokens
+     * @dev Close the minting of the NFTs
      */
     function closeMinting() external onlyRole(DEFAULT_ADMIN_ROLE) {
         mintingClosed = true;
+    }
 
-        // TODO: open all remaining bottles
+    /**
+     *
+     * @dev Whithdraw all the tokens in the contract (require that all bottles are opened)
+     */
+    function withdrawAllTokens() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        for (uint256 i = 1; i <= totalSupply(); i++) {
+            if (!openedBottles[i]) {
+                revert BottlesNotAllOpened();
+            }
+        }
 
         for (uint256 i = 0; i < uniqueERC20TokenAddresses.length; i++) {
             address tokenAddress = uniqueERC20TokenAddresses[i];
-            SafeERC20.safeTransfer(IERC20(tokenAddress), _msgSender(), IERC20(tokenAddress).balanceOf(address(this)));
+            uint256 tokenBalance = IERC20(tokenAddress).balanceOf(address(this));
+            SafeERC20.safeTransfer(IERC20(tokenAddress), _msgSender(), tokenBalance);
         }
     }
 
