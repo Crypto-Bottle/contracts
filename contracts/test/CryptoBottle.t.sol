@@ -23,6 +23,8 @@ contract CryptoCuveeTest is Test {
     address user1;
     address user2;
 
+    CryptoCuvee.Token[] tokens;
+
     function setUp() public {
         deployer = address(this);
         systemWallet = makeAddr("systemWallet");
@@ -186,6 +188,37 @@ contract CryptoCuveeTest is Test {
         // Withdraw USDC as deployer
         vm.startPrank(deployer);
         cryptoCuvee.withdrawUSDC();
+        vm.stopPrank();
+    }
+
+    function testMintAndRetrieveTokens() public {
+        // Mint some USDC for user1 and set approval
+        vm.startPrank(user1);
+        mockUSDC.mint(user1, 100 ether);
+        mockUSDC.approve(address(cryptoCuvee), 100 ether);
+        // Mint a CryptoBottle
+        cryptoCuvee.mint(user1, 1, CryptoCuvee.CategoryType.ROUGE);
+        // Fulfill random words request
+        mockVRFCoordinator.fulfillRandomWords(1, address(cryptoCuvee));
+        tokens = cryptoCuvee.getCryptoBottleTokens(1);
+
+        // Check tokens array is returning the correct values
+        assertEq(tokens.length, 2);
+        assertEq(tokens[0].name, "mBTC");
+        assertEq(tokens[0].tokenAddress, address(mockBTC));
+        assertEq(tokens[0].quantity, 3 ether);
+
+        assertEq(tokens[1].name, "mETH");
+        assertEq(tokens[1].tokenAddress, address(mockETH));
+        assertEq(tokens[1].quantity, 7 ether);
+    }
+
+    function testQuantityMintZero() public {
+        vm.startPrank(user1);
+        mockUSDC.mint(user1, 100 ether);
+        mockUSDC.approve(address(cryptoCuvee), 100 ether);
+        vm.expectRevert(abi.encodeWithSelector(CryptoCuvee.QuantityMustBeGreaterThanZero.selector));
+        cryptoCuvee.mint(user1, 0, CryptoCuvee.CategoryType.ROUGE);
         vm.stopPrank();
     }
 

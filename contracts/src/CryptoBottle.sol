@@ -38,6 +38,7 @@ contract CryptoCuvee is
     error CategoryFullyMinted();
     error MaxQuantityReached();
     error BottleAlreadyOpened(uint256 tokenId);
+    error QuantityMustBeGreaterThanZero();
 
     /**
      * @dev The USDC token address
@@ -315,7 +316,7 @@ contract CryptoCuvee is
         }
 
         if (_quantity == 0) {
-            revert("Quantity must be greater than 0");
+            revert QuantityMustBeGreaterThanZero();
         }
 
         // Only 3 NFTs can be minted per transaction use custom error

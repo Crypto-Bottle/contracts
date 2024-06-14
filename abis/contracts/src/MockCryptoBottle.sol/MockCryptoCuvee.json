@@ -50,6 +50,7 @@
   "function closeMinting()",
   "function cryptoBottles(uint256) view returns (uint8, uint256)",
   "function getApproved(uint256) view returns (address)",
+  "function getCryptoBottleTokens(uint256) view returns (tuple(string,address,uint256)[])",
   "function getRoleAdmin(bytes32) view returns (bytes32)",
   "function grantRole(bytes32,address)",
   "function hasRole(bytes32,address) view returns (bool)",

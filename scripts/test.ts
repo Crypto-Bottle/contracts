@@ -1,18 +1,53 @@
-import { ethers, upgrades } from "hardhat";
-import { IVRFCoordinatorV2Plus } from "../typechain-types";
-import { getImplementationAddress } from "@openzeppelin/upgrades-core";
+import { ethers } from "hardhat";
+import { CryptoCuvee } from "../typechain-types";
 
-// Deploy ONLY for polygon amoy
-const polygonUSDC = "0x677Cf65f71Bf80fFa5D77Dc35EF85624DAa05f0c"; // Custom ERC20 to test
-const systemWallet = "0x66776a6df6622c671E8fa3E1aeC9a4404D22a7cA";
-const coordinator = "0x343300b5d84D444B2ADc9116FEF1bED02BE49Cf2";
-const vrfCoordinatorAddress = "0x343300b5d84d444b2adc9116fef1bed02be49cf2";
-const subId =
-  "32661733261404588143174815268949173524595912581425273350345660355849544508561";
+async function main() {
+  // Get the first signer (default wallet)
+  const [signer] = await ethers.getSigners();
+  const walletAddress = await signer.getAddress();
+  console.log(`Using wallet address: ${walletAddress}`);
 
-async function main() {}
+  // Define the addresses
+  const polygonUSDC = "0x677cf65f71bf80ffa5d77dc35ef85624daa05f0c"; // Custom ERC20 to test
+  const proxy = "0xbaa0ebd9d0ab3d9ea45981c402f02635f87ed95f";
 
+  // Get the contract factory for CryptoCuvee
+  const CryptoCuveeFactory = await ethers.getContractFactory("CryptoCuvee");
+
+  // Attach the CryptoCuvee contract to the proxy address
+  const cryptoCuvee = CryptoCuveeFactory.attach(proxy) as CryptoCuvee;
+
+  // Get the USDC contract instance
+  const usdc = await ethers.getContractAt("IERC20", polygonUSDC, signer);
+
+  // Check USDC balance before approving
+  const usdcBalance = await usdc.balanceOf(walletAddress);
+  console.log(`USDC balance: ${usdcBalance.toString()}`);
+
+  // Approve the proxy to spend USDC on behalf of the wallet
+  const approveTx = await usdc.approve(proxy, ethers.MaxUint256);
+  console.log(`Approval transaction hash: ${approveTx.hash}`);
+  await approveTx.wait();
+  console.log("USDC approved for proxy");
+
+  // Check the allowance
+  const allowance = await usdc.allowance(walletAddress, proxy);
+  console.log(`USDC allowance for proxy: ${allowance.toString()}`);
+
+  // Add try-catch around the mint function to capture detailed errors
+  try {
+    // Call the mint function on CryptoCuvee contract
+    const mintTx = await cryptoCuvee.mint(walletAddress, 1, 1);
+    console.log(`Mint transaction hash: ${mintTx.hash}`);
+    await mintTx.wait();
+    console.log("Minting completed");
+  } catch (error) {
+    console.error("Error during minting:", error);
+  }
+}
+
+// Execute the main function and handle errors
 main().catch((error) => {
-  console.error(error);
+  console.error("Error in script execution:", error);
   process.exitCode = 1;
 });

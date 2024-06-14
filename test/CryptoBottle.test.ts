@@ -70,7 +70,6 @@ describe("CryptoCuvee", () => {
         price: 10n,
         isLinked: false,
         tokens: [
-
           {
             name: "mBTC",
             tokenAddress: await mockBTC.getAddress(),
@@ -245,6 +244,19 @@ describe("CryptoCuvee", () => {
       await cryptoCuvee.getAddress(),
     );
     await cryptoCuvee.connect(user1).openBottle(1);
+  });
+
+  it("Should successfully retrieve CryptoBottles Tokens and their quantities", async () => {
+    await cryptoCuvee.connect(user1).mint(user1.address, 1, 1n);
+    await mockVRFCoordinator.fulfillRandomWords(
+      1n,
+      await cryptoCuvee.getAddress(),
+    );
+    const tokens = await cryptoCuvee.getCryptoBottleTokens(1);
+    expect(tokens[0][0]).to.equal("mBTC");
+    expect(tokens[1][0]).to.equal("mETH");
+    expect(tokens[0][2]).to.equal(3);
+    expect(tokens[1][2]).to.equal(7);
   });
 
   it("Should successfully return tokenURI", async () => {
