@@ -47,7 +47,7 @@ contract CryptoCuveeTest is Test {
         // Deploy CryptoCuvee
         cryptoCuvee = new CryptoCuvee();
         proxy = new ERC1967Proxy(address(cryptoCuvee), "");
-        CryptoCuvee.CryptoBottle[] memory bottles = new CryptoCuvee.CryptoBottle[](1);
+        CryptoCuvee.CryptoBottle[] memory bottles = new CryptoCuvee.CryptoBottle[](2);
         bottles[0] = CryptoCuvee.CryptoBottle({
             categoryType: CryptoCuvee.CategoryType.ROUGE,
             price: 10 ether,
@@ -55,6 +55,14 @@ contract CryptoCuveeTest is Test {
         });
         bottles[0].tokens[0] = CryptoCuvee.Token({name: "mBTC", tokenAddress: address(mockBTC), quantity: 3 ether});
         bottles[0].tokens[1] = CryptoCuvee.Token({name: "mETH", tokenAddress: address(mockETH), quantity: 7 ether});
+
+        bottles[1] = CryptoCuvee.CryptoBottle({
+            categoryType: CryptoCuvee.CategoryType.CHAMPAGNE,
+            price: 5 ether,
+            tokens: new CryptoCuvee.Token[](2)
+        });
+        bottles[1].tokens[0] = CryptoCuvee.Token({name: "mBTC", tokenAddress: address(mockBTC), quantity: 4 ether});
+        bottles[1].tokens[1] = CryptoCuvee.Token({name: "mETH", tokenAddress: address(mockETH), quantity: 6 ether});
 
         // Mint mock tokens
         mockBTC.mint(deployer, 200 ether);
@@ -132,10 +140,26 @@ contract CryptoCuveeTest is Test {
         vm.stopPrank();
     }
 
+    function testMintCryptoBottleChampagneSystemWallet() public {
+        vm.startPrank(systemWallet);
+        cryptoCuvee.mint(user1, 1, CryptoCuvee.CategoryType.CHAMPAGNE);
+        mockVRFCoordinator.fulfillRandomWords(1, address(cryptoCuvee));
+        vm.stopPrank();
+    }
+
     function testMintCryptoBottleSystemWalletFullMinted() public {
         vm.startPrank(systemWallet);
+        vm.expectRevert(abi.encodeWithSelector(CryptoCuvee.CategoryFullyMinted.selector));
         cryptoCuvee.mint(user1, 2, CryptoCuvee.CategoryType.ROUGE);
+        vm.stopPrank();
+    }
+
+    function testMintSimultaneouslySystemWallet() public {
+        vm.startPrank(systemWallet);
+        cryptoCuvee.mint(user1, 1, CryptoCuvee.CategoryType.ROUGE);
+        cryptoCuvee.mint(user2, 1, CryptoCuvee.CategoryType.ROUGE);
         mockVRFCoordinator.fulfillRandomWords(1, address(cryptoCuvee));
+        mockVRFCoordinator.fulfillRandomWords(2, address(cryptoCuvee));
         vm.stopPrank();
     }
 

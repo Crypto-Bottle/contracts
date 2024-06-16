@@ -14,7 +14,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
-//import {console} from "hardhat/console.sol";
+import {console} from "hardhat/console.sol";
 
 /**
  * @title CryptoCuvee
@@ -325,13 +325,13 @@ contract CryptoCuvee is
             revert MaxQuantityReached();
         }
 
-        if (unclaimedBottlesByCategory[_category].length == 0) {
+        if (unclaimedBottlesByCategory[_category].length < _quantity) {
             revert CategoryFullyMinted();
         }
 
-        CryptoBottle storage cryptoBottle = cryptoBottles[unclaimedBottlesByCategory[_category][0]];
-
         if (!hasRole(SYSTEM_WALLET_ROLE, _msgSender())) {
+            uint256 bottleIndex = unclaimedBottlesByCategory[_category][0];
+            CryptoBottle storage cryptoBottle = cryptoBottles[bottleIndex];
             SafeERC20.safeTransferFrom(usdc, _msgSender(), address(this), cryptoBottle.price * _quantity);
         }
 

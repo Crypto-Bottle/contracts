@@ -82,6 +82,23 @@ describe("CryptoCuvee", () => {
           },
         ],
       },
+      {
+        categoryType: 2n, // Example category type
+        price: 5n,
+        isLinked: false,
+        tokens: [
+          {
+            name: "mBTC",
+            tokenAddress: await mockBTC.getAddress(),
+            quantity: 10n,
+          },
+          {
+            name: "mETH",
+            tokenAddress: await mockETH.getAddress(),
+            quantity: 7n,
+          },
+        ],
+      },
     ];
 
     // Mint some mock tokens for the CryptoBottle
@@ -135,6 +152,20 @@ describe("CryptoCuvee", () => {
       .mint(deployerAccount.address, 1n, 1n);
   });
 
+  it("Should mint a Cryptobottle with system wallet second category", async () => {
+    await cryptoCuvee
+      .connect(systemWalletAccount)
+      .mint(deployerAccount.address, 1n, 2n);
+  });
+
+  it("Should revert minting a CryptoBottle invalid category", async () => {
+    await expect(
+      cryptoCuvee
+        .connect(systemWalletAccount)
+        .mint(deployerAccount.address, 3n, 1n),
+    ).to.be.revertedWithCustomError(cryptoCuvee, "CategoryFullyMinted");
+  });
+
   it("Should mint a CryptoBottle correctly with user1 wallet", async () => {
     await cryptoCuvee.connect(user1).mint(user1.address, 1, 1n);
   });
@@ -146,8 +177,13 @@ describe("CryptoCuvee", () => {
   });
 
   it("Should revert if the category is totally minted", async () => {
+    cryptoCuvee.connect(user1).mint(user1.address, 1, 1);
+    await mockVRFCoordinator.fulfillRandomWords(
+      1n,
+      await cryptoCuvee.getAddress(),
+    );
     await expect(
-      cryptoCuvee.connect(user1).mint(user1.address, 1, 2),
+      cryptoCuvee.connect(user1).mint(user1.address, 1, 1),
     ).to.be.revertedWithCustomError(cryptoCuvee, "CategoryFullyMinted");
   });
 
