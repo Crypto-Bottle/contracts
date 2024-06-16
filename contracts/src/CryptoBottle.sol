@@ -309,9 +309,8 @@ contract CryptoCuvee is
      * @param _to The address to mint to
      * @param _quantity The quantity to mint
      * @param _category The category type
-     * @return requestId The request ID
      */
-    function mint(address _to, uint32 _quantity, CategoryType _category) external nonReentrant returns (uint256) {
+    function mint(address _to, uint32 _quantity, CategoryType _category) external nonReentrant {
         if (mintingClosed) {
             revert MintingClosed();
         }
@@ -335,7 +334,7 @@ contract CryptoCuvee is
             SafeERC20.safeTransferFrom(usdc, _msgSender(), address(this), cryptoBottle.price * _quantity);
         }
 
-        return _requestRandomWords(_category, _quantity, _to);
+        _requestRandomWords(_category, _quantity, _to);
     }
 
     /**
@@ -431,13 +430,8 @@ contract CryptoCuvee is
      * @param categoryType The category type
      * @param _quantity The quantity to mint
      * @param _to The address to mint to
-     * @return _requestId The request ID
      */
-    function _requestRandomWords(
-        CategoryType categoryType,
-        uint32 _quantity,
-        address _to
-    ) internal returns (uint256 _requestId) {
+    function _requestRandomWords(CategoryType categoryType, uint32 _quantity, address _to) internal {
         uint256 requestId = coordinator.requestRandomWords(
             VRFV2PlusClient.RandomWordsRequest({
                 keyHash: keyHash,
@@ -457,8 +451,6 @@ contract CryptoCuvee is
         //console.log("Request ID: %d", requestId);
         // Store the randomness request data
         randomnessRequestData[requestId] = randomRequestData;
-
-        return requestId;
     }
 
     /**

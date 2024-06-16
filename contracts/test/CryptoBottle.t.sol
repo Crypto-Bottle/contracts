@@ -168,9 +168,7 @@ contract CryptoCuveeTest is Test {
         // Set allowances and mint tokens
         mockUSDC.mint(user1, 100 ether);
         mockUSDC.approve(address(cryptoCuvee), 100 ether);
-        uint256 requestId = cryptoCuvee.mint(user1, 1, CryptoCuvee.CategoryType.ROUGE);
-        // Return RequestId should be 1
-        assertEq(requestId, 1);
+        cryptoCuvee.mint(user1, 1, CryptoCuvee.CategoryType.ROUGE);
         vm.stopPrank();
     }
 
