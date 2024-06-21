@@ -40,6 +40,7 @@ contract CryptoCuvee is
     error BottleAlreadyOpened(uint256 tokenId);
     error QuantityMustBeGreaterThanZero();
     error BottlesNotAllOpened();
+    error MintingNotClosed();
 
     /**
      * @dev The USDC token address
@@ -356,6 +357,12 @@ contract CryptoCuvee is
      * @dev Whithdraw all the tokens in the contract (require that all bottles are opened)
      */
     function withdrawAllTokens() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        
+        // Revert if minting is not closed
+        if (!mintingClosed) {
+            revert MintingNotClosed();
+        }
+
         for (uint256 i = 1; i <= totalSupply(); i++) {
             if (!openedBottles[i]) {
                 revert BottlesNotAllOpened();
