@@ -27,6 +27,7 @@
   "error InvalidInitialization()",
   "error MaxQuantityReached()",
   "error MintingClosed()",
+  "error MintingNotClosed()",
   "error NotInitializing()",
   "error OnlyCoordinatorCanFulfill(address,address)",
   "error QuantityMustBeGreaterThanZero()",

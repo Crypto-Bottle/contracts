@@ -247,6 +247,9 @@ describe("CryptoCuvee", () => {
       1n,
       await cryptoCuvee.getAddress(),
     );
+    await
+      cryptoCuvee.connect(deployerAccount).closeMinting();
+    
     await expect(
       cryptoCuvee.connect(deployerAccount).withdrawAllTokens(),
     ).to.be.revertedWithCustomError(cryptoCuvee, "BottlesNotAllOpened");
@@ -259,6 +262,7 @@ describe("CryptoCuvee", () => {
       await cryptoCuvee.getAddress(),
     );
     await cryptoCuvee.connect(user1).openBottle(1);
+    await cryptoCuvee.connect(deployerAccount).closeMinting();
     await cryptoCuvee.connect(deployerAccount).withdrawAllTokens();
 
     expect(await mockBTC.balanceOf(await cryptoCuvee.getAddress())).to.equal(0);
