@@ -135,10 +135,11 @@ jobs:
           FOUNDRY_PROFILE: default
 
       - name: Run coverage
-        run: NO_COLOR=1 forge coverage --report summary --ir-minimum --report lcov >> $GITHUB_STEP_SUMMARY
         env:
-          FOUNDRY_PROFILE: default
+          NO_COLOR: 1
           PROPTEST_MAX_SHRINK_ITERS: 1000
+          FOUNDRY_PROFILE: default
+        run: forge coverage --report summary --ir-minimum --report lcov >> $GITHUB_STEP_SUMMARY
 
       - name: Setup LCOV
         uses: hrishikesh-kadam/setup-lcov@v1
