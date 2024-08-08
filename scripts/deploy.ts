@@ -47,6 +47,7 @@ async function deployImplementation() {
     [],
     "https://app.cryptobottle.fr/api/metadata/",
     systemWallet,
+    systemWallet,
     coordinator,
     ethers.keccak256(ethers.toUtf8Bytes("CryptoBottleHash")),
     2000000,
