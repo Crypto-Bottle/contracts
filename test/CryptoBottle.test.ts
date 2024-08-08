@@ -135,6 +135,7 @@ describe("CryptoCuvee", () => {
       exampleCryptoBottle,
       "https://test.com/",
       systemWalletAccount.address,
+      deployerAccount.address,
       mockCoordinatorAddress,
       ethers.keccak256(ethers.toUtf8Bytes("keyHash_example")), // keyHash
       2000000, // callbackGasLimit
@@ -247,9 +248,8 @@ describe("CryptoCuvee", () => {
       1n,
       await cryptoCuvee.getAddress(),
     );
-    await
-      cryptoCuvee.connect(deployerAccount).closeMinting();
-    
+    await cryptoCuvee.connect(deployerAccount).closeMinting();
+
     await expect(
       cryptoCuvee.connect(deployerAccount).withdrawAllTokens(),
     ).to.be.revertedWithCustomError(cryptoCuvee, "BottlesNotAllOpened");
@@ -414,6 +414,7 @@ describe("CryptoCuvee wrong init", () => {
       [],
       "https://test.com/",
       systemWalletAccount.address,
+      deployerAccount.address,
       await mockVRFCoordinator.getAddress(),
       ethers.keccak256(ethers.toUtf8Bytes("keyHash_example")), // keyHash
       2000000, // callbackGasLimit
@@ -427,6 +428,7 @@ describe("CryptoCuvee wrong init", () => {
         [],
         "https://test.com/",
         systemWalletAccount.address,
+        deployerAccount.address,
         await mockVRFCoordinator.getAddress(),
         ethers.keccak256(ethers.toUtf8Bytes("keyHash_example")), // keyHash
         2000000, // callbackGasLimit
@@ -463,6 +465,7 @@ describe("CryptoCuvee wrong init", () => {
         exampleCryptoBottle,
         "https://test.com/",
         systemWalletAccount.address,
+        deployerAccount.address,
         await mockVRFCoordinator.getAddress(),
         ethers.keccak256(ethers.toUtf8Bytes("keyHash_example")), // keyHash
         2000000, // callbackGasLimit

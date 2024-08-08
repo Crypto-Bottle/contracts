@@ -57,7 +57,7 @@
   "function getRoleAdmin(bytes32) view returns (bytes32)",
   "function grantRole(bytes32,address)",
   "function hasRole(bytes32,address) view returns (bool)",
-  "function initialize(address,tuple(uint8,uint256,tuple(string,address,uint256)[])[],string,address,address,bytes32,uint32,uint16,uint256)",
+  "function initialize(address,tuple(uint8,uint256,tuple(string,address,uint256)[])[],string,address,address,address,bytes32,uint32,uint16,uint256)",
   "function isApprovedForAll(address,address) view returns (bool)",
   "function mint(address,uint32,uint8)",
   "function name() view returns (string)",
