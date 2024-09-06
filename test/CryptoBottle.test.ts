@@ -226,9 +226,9 @@ describe("CryptoCuvee", () => {
     );
   });
 
-  it("Should revert if the role is not granted when closeMinting", async () => {
+  it("Should revert if the role is not granted when changeMintingStatus", async () => {
     await expect(
-      cryptoCuvee.connect(user1).closeMinting(),
+      cryptoCuvee.connect(user1).changeMintingStatus(),
     ).to.be.revertedWithCustomError(
       cryptoCuvee,
       "AccessControlUnauthorizedAccount",
@@ -236,7 +236,7 @@ describe("CryptoCuvee", () => {
   });
 
   it("Should close minting successfully", async () => {
-    await cryptoCuvee.connect(deployerAccount).closeMinting();
+    await cryptoCuvee.connect(deployerAccount).changeMintingStatus();
     await expect(
       cryptoCuvee.connect(user1).mint(user1.address, 1, 1n),
     ).to.be.revertedWithCustomError(cryptoCuvee, "MintingClosed");
@@ -248,7 +248,7 @@ describe("CryptoCuvee", () => {
       1n,
       await cryptoCuvee.getAddress(),
     );
-    await cryptoCuvee.connect(deployerAccount).closeMinting();
+    await cryptoCuvee.connect(deployerAccount).changeMintingStatus();
 
     await expect(
       cryptoCuvee.connect(deployerAccount).withdrawAllTokens(),
@@ -262,7 +262,7 @@ describe("CryptoCuvee", () => {
       await cryptoCuvee.getAddress(),
     );
     await cryptoCuvee.connect(user1).openBottle(1);
-    await cryptoCuvee.connect(deployerAccount).closeMinting();
+    await cryptoCuvee.connect(deployerAccount).changeMintingStatus();
     await cryptoCuvee.connect(deployerAccount).withdrawAllTokens();
 
     expect(await mockBTC.balanceOf(await cryptoCuvee.getAddress())).to.equal(0);

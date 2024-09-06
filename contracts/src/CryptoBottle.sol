@@ -121,7 +121,7 @@ contract CryptoCuvee is
      */
     uint256 private s_subscriptionId;
 
-    uint256 public maxQuantityMintable = 3;
+    uint256 public maxQuantityMintable;
 
     mapping(uint256 => RandomRequestData) private randomnessRequestData;
 
@@ -246,6 +246,7 @@ contract CryptoCuvee is
         callbackGasLimit = _callbackGasLimit;
         requestConfirmations = _requestConfirmations;
         s_subscriptionId = subscriptionId;
+        maxQuantityMintable = 3;
 
         // Initialize CryptoBottles
         for (uint256 i = 0; i < _cryptoBottles.length; i++) {
