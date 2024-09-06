@@ -121,6 +121,8 @@ contract CryptoCuvee is
      */
     uint256 private s_subscriptionId;
 
+    uint256 public maxQuantityMintable = 3;
+
     mapping(uint256 => RandomRequestData) private randomnessRequestData;
 
     /**
@@ -152,6 +154,11 @@ contract CryptoCuvee is
      * @dev Unclaimed tokens by category
      */
     mapping(CategoryType => uint256[]) private unclaimedBottlesByCategory;
+
+    /**
+     * @dev Pending mint by category
+     */
+    mapping(CategoryType => uint256) private pendingMintsByCategory;
 
     /**
      * @dev All Opened Bottles
@@ -292,7 +299,7 @@ contract CryptoCuvee is
      * @param _tokenId The token ID
      */
     function openBottle(uint256 _tokenId) external nonReentrant {
-        _checkAuthorized(ownerOf(_tokenId), _msgSender(), _tokenId);
+        //_checkAuthorized(ownerOf(_tokenId), _msgSender(), _tokenId);
 
         uint256 cryptoBottleIndex = tokenToCryptoBottle[_tokenId];
         CryptoBottle storage cryptoBottle = cryptoBottles[cryptoBottleIndex];
@@ -340,14 +347,24 @@ contract CryptoCuvee is
             revert QuantityMustBeGreaterThanZero();
         }
 
-        // Only 3 NFTs can be minted per transaction use custom error
-        if (_quantity > 3) {
+        if (_quantity > maxQuantityMintable) {
             revert MaxQuantityReached();
         }
 
         if (unclaimedBottlesByCategory[_category].length < _quantity) {
             revert CategoryFullyMinted();
         }
+
+        // Add check to see if there are enough unclaimed bottles after subtracting pending mints
+        if (
+            unclaimedBottlesByCategory[_category].length <
+            _quantity + pendingMintsByCategory[_category]
+        ) {
+            revert CategoryFullyMinted();
+        }
+
+        // Increment pending mints
+        pendingMintsByCategory[_category] += _quantity;
 
         if (!hasRole(SYSTEM_WALLET_ROLE, _msgSender())) {
             uint256 bottleIndex = unclaimedBottlesByCategory[_category][0];
@@ -375,10 +392,19 @@ contract CryptoCuvee is
     }
 
     /**
-     * @dev Close the minting of the NFTs
+     * @dev Set the max quantity mintable
      */
-    function closeMinting() external onlyRole(DEFAULT_ADMIN_ROLE) {
-        mintingClosed = true;
+    function setMaxQuantityMintable(
+        uint256 _maxQuantityMintable
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        maxQuantityMintable = _maxQuantityMintable;
+    }
+
+    /**
+     * @dev Close or Open the minting of the NFTs
+     */
+    function changeMintingStatus() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        mintingClosed = !mintingClosed;
     }
 
     /**
@@ -458,10 +484,6 @@ contract CryptoCuvee is
             _category
         ];
 
-        if (unclaimedTokens.length == 0) {
-            revert CategoryFullyMinted();
-        }
-
         // Select a token ID based on randomness
         uint256 randomIndex = _random % unclaimedTokens.length;
         uint256 selectedTokenId = unclaimedTokens[randomIndex];
@@ -514,6 +536,7 @@ contract CryptoCuvee is
         //console.log("Request ID: %d", requestId);
         // Store the randomness request data
         randomnessRequestData[requestId] = randomRequestData;
+        
     }
 
     /**
@@ -527,20 +550,17 @@ contract CryptoCuvee is
     ) internal override {
         RandomRequestData memory requestData = randomnessRequestData[requestId];
 
-        uint256 randomWord = randomWords[0];
-        uint256 mask = 0xFFFF; // A mask to extract 16 bits
-
         for (uint256 i = 0; i < requestData.quantity; i++) {
-            // Shift right and apply mask, then add the index to ensure it's always non-zero and unique.
-            uint256 uniqueRandom = ((randomWord >> (16 * i)) & mask) + i;
-
             _invest(
                 requestData.categoryType,
-                uniqueRandom,
+                randomWords[i],
                 requestData.to,
                 requestId
             );
         }
+
+        // Decrement pending mints by the number of mints that have just been completed
+        pendingMintsByCategory[requestData.categoryType] -= requestData.quantity;
 
         delete randomnessRequestData[requestId];
     }

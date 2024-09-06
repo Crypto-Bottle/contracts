@@ -157,12 +157,17 @@ contract CryptoCuveeTest is Test {
         vm.stopPrank();
     }
 
+    function testsetMaxQuantityMintable() public {
+        vm.startPrank(deployer);
+        cryptoCuvee.setMaxQuantityMintable(5);
+        vm.stopPrank();
+    }
+
     function testMintSimultaneouslySystemWallet() public {
         vm.startPrank(systemWallet);
         cryptoCuvee.mint(user1, 1, CryptoCuvee.CategoryType.ROUGE);
+        vm.expectRevert(abi.encodeWithSelector(CryptoCuvee.CategoryFullyMinted.selector));
         cryptoCuvee.mint(user2, 1, CryptoCuvee.CategoryType.ROUGE);
-        mockVRFCoordinator.fulfillRandomWords(1, address(cryptoCuvee));
-        mockVRFCoordinator.fulfillRandomWords(2, address(cryptoCuvee));
         vm.stopPrank();
     }
 
@@ -229,7 +234,7 @@ contract CryptoCuveeTest is Test {
 
         // Withdraw all tokens
         vm.startPrank(deployer);
-        cryptoCuvee.closeMinting();
+        cryptoCuvee.changeMintingStatus();
         vm.expectRevert(abi.encodeWithSelector(CryptoCuvee.BottlesNotAllOpened.selector));
         cryptoCuvee.withdrawAllTokens();
 
@@ -250,7 +255,7 @@ contract CryptoCuveeTest is Test {
 
         // Withdraw all tokens
         vm.startPrank(deployer);
-        cryptoCuvee.closeMinting();
+        cryptoCuvee.changeMintingStatus();
         cryptoCuvee.withdrawAllTokens();
 
         // Check remaining balances
@@ -323,7 +328,7 @@ contract CryptoCuveeTest is Test {
         vm.stopPrank();
     }
 
-    function testRevertCloseMintingWithoutRole() public {
+    function testRevertchangeMintingStatusWithoutRole() public {
         vm.startPrank(user1);
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -332,13 +337,13 @@ contract CryptoCuveeTest is Test {
                 cryptoCuvee.DEFAULT_ADMIN_ROLE()
             )
         );
-        cryptoCuvee.closeMinting();
+        cryptoCuvee.changeMintingStatus();
         vm.stopPrank();
     }
 
-    function testCloseMintingSuccessfully() public {
+    function testchangeMintingStatusSuccessfully() public {
         vm.startPrank(deployer);
-        cryptoCuvee.closeMinting();
+        cryptoCuvee.changeMintingStatus();
         vm.stopPrank();
 
         // Try minting again and expect revert
