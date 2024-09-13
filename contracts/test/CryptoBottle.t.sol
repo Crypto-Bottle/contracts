@@ -191,6 +191,20 @@ contract CryptoCuveeTest is Test {
         vm.stopPrank();
     }
 
+    function testOpenBottleNotOwner() public {
+        vm.startPrank(user1);
+        // Set allowances and mint tokens
+        mockUSDC.mint(user1, 100 ether);
+        mockUSDC.approve(address(cryptoCuvee), 100 ether);
+        cryptoCuvee.mint(user1, 1, CryptoCuvee.CategoryType.ROUGE);
+        mockVRFCoordinator.fulfillRandomWords(1, address(cryptoCuvee));
+        vm.stopPrank();
+        vm.startPrank(user2);
+        vm.expectRevert(abi.encodeWithSelector(CryptoCuvee.NotOwnerBottle.selector, 1));
+        cryptoCuvee.openBottle(1);
+        vm.stopPrank();
+    }
+
     function testOpenBottleRevert() public {
         vm.startPrank(user1);
         // Set allowances and mint tokens

@@ -29,6 +29,7 @@
   "error MintingClosed()",
   "error MintingNotClosed()",
   "error NotInitializing()",
+  "error NotOwnerBottle(uint256)",
   "error OnlyCoordinatorCanFulfill(address,address)",
   "error QuantityMustBeGreaterThanZero()",
   "error ReentrancyGuardReentrantCall()",

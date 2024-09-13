@@ -41,6 +41,7 @@ contract CryptoCuvee is
     error QuantityMustBeGreaterThanZero();
     error BottlesNotAllOpened();
     error MintingNotClosed();
+    error NotOwnerBottle(uint256 tokenId);
 
     /**
      * @dev The USDC token address
@@ -301,7 +302,11 @@ contract CryptoCuvee is
      */
     function openBottle(uint256 _tokenId) external nonReentrant {
         //_checkAuthorized(ownerOf(_tokenId), _msgSender(), _tokenId);
-
+        
+        if (ownerOf(_tokenId) != _msgSender()) {
+            revert NotOwnerBottle(_tokenId);
+        }
+        
         uint256 cryptoBottleIndex = tokenToCryptoBottle[_tokenId];
         CryptoBottle storage cryptoBottle = cryptoBottles[cryptoBottleIndex];
 
@@ -351,7 +356,7 @@ contract CryptoCuvee is
         if (_quantity > maxQuantityMintable) {
             revert MaxQuantityReached();
         }
-        
+
         // Add check to see if there are enough unclaimed bottles after subtracting pending mints
         if (
             unclaimedBottlesByCategory[_category].length <

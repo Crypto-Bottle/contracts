@@ -306,6 +306,17 @@ describe("CryptoCuvee", () => {
     await cryptoCuvee.connect(user1).openBottle(1);
   });
 
+  it("Should revert opening a bottle if he is not the owner", async () => {
+    await cryptoCuvee.connect(user1).mint(user1.address, 1, 1n);
+    await mockVRFCoordinator.fulfillRandomWords(
+      1n,
+      await cryptoCuvee.getAddress(),
+    );
+    await expect(
+      cryptoCuvee.connect(user2).openBottle(1),
+    ).to.be.revertedWithCustomError(cryptoCuvee, "NotOwnerBottle");
+  });
+
   it("Should successfully retrieve CryptoBottles Tokens and their quantities", async () => {
     await cryptoCuvee.connect(user1).mint(user1.address, 1, 1n);
     await mockVRFCoordinator.fulfillRandomWords(
