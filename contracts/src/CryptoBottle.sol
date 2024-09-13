@@ -351,11 +351,7 @@ contract CryptoCuvee is
         if (_quantity > maxQuantityMintable) {
             revert MaxQuantityReached();
         }
-
-        if (unclaimedBottlesByCategory[_category].length < _quantity) {
-            revert CategoryFullyMinted();
-        }
-
+        
         // Add check to see if there are enough unclaimed bottles after subtracting pending mints
         if (
             unclaimedBottlesByCategory[_category].length <
