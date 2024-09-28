@@ -235,26 +235,6 @@ contract CryptoCuveeTest is Test {
         vm.stopPrank();
     }
 
-    function testwithdrawAllTokensBottlesNotAllOpened() public {
-        // Mint some USDC for user1 and set approval
-        vm.startPrank(user1);
-        mockUSDC.mint(user1, 100 ether);
-        mockUSDC.approve(address(cryptoCuvee), 100 ether);
-        // Mint a CryptoBottle
-        cryptoCuvee.mint(user1, 1, CryptoCuvee.CategoryType.ROUGE);
-        // Fulfill random words request
-        mockVRFCoordinator.fulfillRandomWords(1, address(cryptoCuvee));
-        vm.stopPrank();
-
-        // Withdraw all tokens
-        vm.startPrank(deployer);
-        cryptoCuvee.changeMintingStatus();
-        vm.expectRevert(abi.encodeWithSelector(CryptoCuvee.BottlesNotAllOpened.selector));
-        cryptoCuvee.withdrawAllTokens();
-
-        vm.stopPrank();
-    }
-
     function testwithdrawAllTokens() public {
         // Mint some USDC for user1 and set approval
         vm.startPrank(user1);
@@ -271,7 +251,11 @@ contract CryptoCuveeTest is Test {
         vm.startPrank(deployer);
         cryptoCuvee.changeMintingStatus();
         cryptoCuvee.withdrawAllTokens();
-
+        vm.expectRevert(abi.encodeWithSelector(CryptoCuvee.AllTokensWithdrawn.selector));
+        cryptoCuvee.changeMintingStatus();
+        vm.expectRevert(abi.encodeWithSelector(CryptoCuvee.AllTokensWithdrawn.selector));
+        cryptoCuvee.withdrawAllTokens();
+        
         // Check remaining balances
         assertEq(mockBTC.balanceOf(address(cryptoCuvee)), 0);
         assertEq(mockETH.balanceOf(address(cryptoCuvee)), 0);

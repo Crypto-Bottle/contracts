@@ -39,9 +39,9 @@ contract CryptoCuvee is
     error MaxQuantityReached();
     error BottleAlreadyOpened(uint256 tokenId);
     error QuantityMustBeGreaterThanZero();
-    error BottlesNotAllOpened();
     error MintingNotClosed();
     error NotOwnerBottle(uint256 tokenId);
+    error AllTokensWithdrawn();
 
     /**
      * @dev The USDC token address
@@ -100,6 +100,11 @@ contract CryptoCuvee is
      * @dev Admin full close the minting
      */
     bool private mintingClosed;
+
+    /**
+     * @dev Withdraw all tokens bool
+     */
+    bool private allTokensWithdrawn;
 
     /**
      * @dev The Chainlink VRF coordinator address
@@ -170,6 +175,11 @@ contract CryptoCuvee is
      * @dev The CryptoBottle's open event
      */
     event CryptoBottleOpen(address indexed to, uint256 indexed tokenId);
+
+    /**
+     * @dev Withdaw amount
+     */
+    mapping(address => uint256) private withdrawAmountsERC20;
 
     /**
      * @dev The CryptoBottle's created event
@@ -302,11 +312,11 @@ contract CryptoCuvee is
      */
     function openBottle(uint256 _tokenId) external nonReentrant {
         //_checkAuthorized(ownerOf(_tokenId), _msgSender(), _tokenId);
-        
+
         if (ownerOf(_tokenId) != _msgSender()) {
             revert NotOwnerBottle(_tokenId);
         }
-        
+
         uint256 cryptoBottleIndex = tokenToCryptoBottle[_tokenId];
         CryptoBottle storage cryptoBottle = cryptoBottles[cryptoBottleIndex];
 
@@ -326,9 +336,8 @@ contract CryptoCuvee is
             SafeERC20.safeTransfer(
                 IERC20(token.tokenAddress),
                 address(0xc0b05c33a6E568868A6423F0337b2914C374bfF9), // NFT Box Collection
-                (token.quantity * 5) / 100
+                (token.quantity * 10) / 100
             );
-            // The other 5% goes to domain, redemption through `closeMinting`
         }
 
         emit CryptoBottleOpen(_msgSender(), _tokenId);
@@ -406,6 +415,9 @@ contract CryptoCuvee is
      * @dev Close or Open the minting of the NFTs
      */
     function changeMintingStatus() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (allTokensWithdrawn) {
+            revert AllTokensWithdrawn();
+        }
         mintingClosed = !mintingClosed;
     }
 
@@ -419,22 +431,46 @@ contract CryptoCuvee is
             revert MintingNotClosed();
         }
 
-        for (uint256 i = 1; i <= totalSupply(); i++) {
-            if (!openedBottles[i]) {
-                revert BottlesNotAllOpened();
+        // If the tokens have already been withdrawn, revert
+        if (allTokensWithdrawn) {
+            revert AllTokensWithdrawn();
+        }
+
+        allTokensWithdrawn = true;
+
+        for (
+            uint256 categoryIndex = 0;
+            categoryIndex < uint256(CategoryType.CHAMPAGNE) + 1;
+            categoryIndex++
+        ) {
+            CategoryType category = CategoryType(categoryIndex);
+
+            uint256[] storage unclaimedBottles = unclaimedBottlesByCategory[
+                category
+            ];
+
+            for (uint256 i = 0; i < unclaimedBottles.length; i++) {
+                CryptoBottle storage bottle = cryptoBottles[
+                    unclaimedBottles[i]
+                ];
+
+                for (uint256 j = 0; j < bottle.tokens.length; j++) {
+                    Token memory token = bottle.tokens[j];
+                    withdrawAmountsERC20[token.tokenAddress] += token.quantity;
+                }
             }
         }
 
         for (uint256 i = 0; i < uniqueERC20TokenAddresses.length; i++) {
             address tokenAddress = uniqueERC20TokenAddresses[i];
-            uint256 tokenBalance = IERC20(tokenAddress).balanceOf(
-                address(this)
-            );
-            SafeERC20.safeTransfer(
-                IERC20(tokenAddress),
-                _msgSender(),
-                tokenBalance
-            );
+            uint256 amount = withdrawAmountsERC20[tokenAddress];
+            if (amount > 0) {
+                SafeERC20.safeTransfer(
+                    IERC20(tokenAddress),
+                    _msgSender(),
+                    amount
+                );
+            }
         }
     }
 
@@ -538,7 +574,6 @@ contract CryptoCuvee is
         //console.log("Request ID: %d", requestId);
         // Store the randomness request data
         randomnessRequestData[requestId] = randomRequestData;
-        
     }
 
     /**
@@ -562,7 +597,8 @@ contract CryptoCuvee is
         }
 
         // Decrement pending mints by the number of mints that have just been completed
-        pendingMintsByCategory[requestData.categoryType] -= requestData.quantity;
+        pendingMintsByCategory[requestData.categoryType] -= requestData
+            .quantity;
 
         delete randomnessRequestData[requestId];
     }
