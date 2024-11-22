@@ -32,8 +32,8 @@ devDependencies:
     specifier: ^1.1.4
     version: 1.1.4(hardhat@2.19.4)
   '@matterlabs/hardhat-zksync-verify':
-    specifier: ^1.4.0
-    version: 1.4.0(@nomicfoundation/hardhat-verify@2.0.3)(ethers@6.10.0)(ts-node@10.9.2)(typescript@5.3.3)
+    specifier: ^1.4.3
+    version: 1.4.3(@nomicfoundation/hardhat-verify@2.0.3)(ts-node@10.9.2)(typescript@5.3.3)
   '@nomicfoundation/hardhat-chai-matchers':
     specifier: ^2.0.3
     version: 2.0.3(@nomicfoundation/hardhat-ethers@3.0.5)(chai@4.4.1)(ethers@6.10.0)(hardhat@2.19.4)
@@ -1087,8 +1087,8 @@ packages:
       - supports-color
     dev: true
 
-  /@matterlabs/hardhat-zksync-verify@1.4.0(@nomicfoundation/hardhat-verify@2.0.3)(ethers@6.10.0)(ts-node@10.9.2)(typescript@5.3.3):
-    resolution: {integrity: sha512-92mYB6AyZH0cT/rgegsvWx3N7wvbggcnEQBU7vdfSfEZ7ViTNr5SPtTJeWOVmnS4gvjZ42U42QMw5yX2P8ukbg==}
+  /@matterlabs/hardhat-zksync-verify@1.4.3(@nomicfoundation/hardhat-verify@2.0.3)(ts-node@10.9.2)(typescript@5.3.3):
+    resolution: {integrity: sha512-TONID/+mG8KngZ9iI8yiOgC8VD+cus7M+ejCjF4bGNzsmmzsklGJwzry6bQpk8BXqzsMgbuV+4KjDT4JXiS/QA==}
     peerDependencies:
       '@nomicfoundation/hardhat-verify': ^2.0.0
     dependencies:
@@ -1105,11 +1105,9 @@ packages:
       hardhat: 2.19.4(ts-node@10.9.2)(typescript@5.3.3)
       sinon: 17.0.1
       sinon-chai: 3.7.0(chai@4.4.1)(sinon@17.0.1)
-      zksync-ethers: 6.0.0(ethers@6.10.0)
     transitivePeerDependencies:
       - bufferutil
       - encoding
-      - ethers
       - supports-color
       - ts-node
       - typescript
