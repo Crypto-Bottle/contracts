@@ -1,37 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {ERC721Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
-import {ERC721EnumerableUpgradeable} from
-    "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
-import {ERC721RoyaltyUpgradeable} from
-    "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721RoyaltyUpgradeable.sol";
-import {IVRFCoordinatorV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/interfaces/IVRFCoordinatorV2Plus.sol";
-import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
-import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import {VRFConsumerBaseV2Upgradeable} from "./VRFConsumerBaseV2Upgradeable.sol";
+import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import {ERC721Enumerable} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import {ERC721Royalty} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Royalty.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
-//import {console} from "hardhat/console.sol";
+import {console} from "hardhat/console.sol";
 
 /**
- * @title CryptoCuvee
- * @dev The CryptoCuvee contract is an UUPS upgradeable contract that allows users to mint NFTs which will vault a percentage of the minting price into crypto currencies.
+ * @title CryptoCuveeV2
+ * @dev The CryptoCuveeV2 contract is a contract that allows users to mint NFTs which will vault a percentage of the minting price into crypto currencies.
  */
-contract CryptoCuvee is
-    Initializable,
-    ReentrancyGuardUpgradeable,
-    UUPSUpgradeable,
-    ERC721Upgradeable,
-    ERC721EnumerableUpgradeable,
-    ERC721RoyaltyUpgradeable,
-    AccessControlUpgradeable,
-    VRFConsumerBaseV2Upgradeable
-{
+contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royalty, AccessControl {
     /**
      * @dev Error messages for require statements
      */
@@ -44,6 +28,12 @@ contract CryptoCuvee is
     error MintingNotClosed();
     error NotOwnerBottle(uint256 tokenId);
     error AllTokensWithdrawn();
+    error BottlesAlreadyFilled();
+
+    /**
+     * @dev The next token ID
+     */
+    uint256 private _nextTokenId;
 
     /**
      * @dev The USDC token address
@@ -84,15 +74,6 @@ contract CryptoCuvee is
     }
 
     /**
-     * @dev The random request data struct
-     */
-    struct RandomRequestData {
-        CategoryType categoryType;
-        uint256 quantity;
-        address to;
-    }
-
-    /**
      * @dev Systel wallet role
      */
     bytes32 public constant SYSTEM_WALLET_ROLE = keccak256("SYSTEM_WALLET_ROLE");
@@ -107,30 +88,7 @@ contract CryptoCuvee is
      */
     bool private allTokensWithdrawn;
 
-    /**
-     * @dev The Chainlink VRF coordinator address
-     */
-    IVRFCoordinatorV2Plus private coordinator;
-    /**
-     * @dev The key hash for the Chainlink VRF
-     */
-    bytes32 private keyHash;
-    /**
-     * @dev The fee for the Chainlink VRF
-     */
-    uint32 private callbackGasLimit; // Adjust the gas limit based on your callback function
-    /**
-     * @dev Request confirmations for the Chainlink VRF
-     */
-    uint16 private requestConfirmations;
-    /**
-     * @dev The subscription ID for the Chainlink VRF
-     */
-    uint256 private s_subscriptionId;
-
     uint256 public maxQuantityMintable;
-
-    mapping(uint256 => RandomRequestData) private randomnessRequestData;
 
     /**
      * @dev All the CryptoBottles
@@ -185,14 +143,12 @@ contract CryptoCuvee is
     /**
      * @dev The CryptoBottle's created event
      */
-    event CryptoBottleCreated(
-        address indexed to, uint256 indexed tokenId, uint256 cryptoBottleIndex, uint256 requestId
-    );
+    event CryptoBottleCreated(address indexed to, uint256 indexed tokenId, uint256 cryptoBottleIndex);
 
     /**
-     * @dev Gap for upgrade safety
+     * @dev Track if bottles have been filled
      */
-    uint256[49] __gap;
+    bool private bottlesFilled;
 
     /**
      * @dev See {IERC165-supportsInterface}.
@@ -201,7 +157,7 @@ contract CryptoCuvee is
         public
         view
         virtual
-        override(ERC721Upgradeable, ERC721EnumerableUpgradeable, ERC721RoyaltyUpgradeable, AccessControlUpgradeable)
+        override(ERC721, ERC721Enumerable, ERC721Royalty, AccessControl)
         returns (bool)
     {
         return super.supportsInterface(interfaceId);
@@ -212,42 +168,21 @@ contract CryptoCuvee is
      * @param _usdc The USDC token address
      * @param _cryptoBottles The CryptoBottles array
      * @param admin The admin address
-     * @param vrfCoordinator The Chainlink VRF coordinator address
-     * @param _keyHash The key hash for the Chainlink VRF
-     * @param _callbackGasLimit The fee for the Chainlink VRF
-     * @param _requestConfirmations The request confirmations for the Chainlink VRF
-     * @param subscriptionId The subscription ID for the Chainlink VRF
      */
-    function initialize(
+    constructor(
         IERC20 _usdc,
         CryptoBottle[] memory _cryptoBottles,
         string memory _baseUri,
         address systemWallet,
-        address admin,
-        address vrfCoordinator,
-        bytes32 _keyHash,
-        uint32 _callbackGasLimit,
-        uint16 _requestConfirmations,
-        uint256 subscriptionId
-    ) public initializer {
-        __ERC721_init("CryptoCuvee", "CCV");
-        __VRFConsumerBaseV2Upgradeable_init(vrfCoordinator);
-
-        // Init Admin Role
+        address admin
+    ) ERC721("CryptoCuvee", "CCV") {
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
-
-        // Init System Wallet Role
         _grantRole(SYSTEM_WALLET_ROLE, systemWallet);
 
-        mintingClosed = false;
+        _nextTokenId = 1;
+        mintingClosed = true;
         usdc = _usdc;
         baseURI = _baseUri;
-        // Initialize Chainlink VRF
-        coordinator = IVRFCoordinatorV2Plus(vrfCoordinator);
-        keyHash = _keyHash;
-        callbackGasLimit = _callbackGasLimit;
-        requestConfirmations = _requestConfirmations;
-        s_subscriptionId = subscriptionId;
         maxQuantityMintable = 3;
 
         // Initialize CryptoBottles
@@ -275,8 +210,16 @@ contract CryptoCuvee is
             }
             unclaimedBottlesByCategory[_cryptoBottles[i].categoryType].push(i);
         }
+    }
 
-        // For all addresses in uniqueERC20TokenAddresses, check if the sender has enough balance
+    /**
+     * @dev Transfer initial token quantities to the contract and open mint
+     */
+    function fillBottles() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (bottlesFilled) {
+            revert BottlesAlreadyFilled();
+        }
+
         for (uint256 i = 0; i < uniqueERC20TokenAddresses.length; i++) {
             address tokenAddress = uniqueERC20TokenAddresses[i];
             uint256 tokenBalance = IERC20(tokenAddress).balanceOf(_msgSender());
@@ -288,6 +231,9 @@ contract CryptoCuvee is
                 IERC20(tokenAddress), _msgSender(), address(this), totalTokenQuantity[tokenAddress]
             );
         }
+
+        bottlesFilled = true;
+        mintingClosed = false; // Open mint
     }
 
     /**
@@ -342,21 +288,38 @@ contract CryptoCuvee is
             revert MaxQuantityReached();
         }
 
-        // Add check to see if there are enough unclaimed bottles after subtracting pending mints
-        if (unclaimedBottlesByCategory[_category].length < _quantity + pendingMintsByCategory[_category]) {
+        // Check if there are enough unclaimed bottles
+        if (unclaimedBottlesByCategory[_category].length < _quantity) {
             revert CategoryFullyMinted();
         }
 
-        // Increment pending mints
-        pendingMintsByCategory[_category] += _quantity;
-
+        // Handle USDC payment if not system wallet
         if (!hasRole(SYSTEM_WALLET_ROLE, _msgSender())) {
             uint256 bottleIndex = unclaimedBottlesByCategory[_category][0];
             CryptoBottle storage cryptoBottle = cryptoBottles[bottleIndex];
             SafeERC20.safeTransferFrom(usdc, _msgSender(), address(this), cryptoBottle.price * _quantity);
         }
 
-        _requestRandomWords(_category, _quantity, _to);
+        // Mint tokens (sequentially)
+        for (uint32 i = 0; i < _quantity; i++) {
+            uint256[] storage unclaimedTokens = unclaimedBottlesByCategory[_category];
+
+            // Always select the first token in the array
+            uint256 selectedTokenId = unclaimedTokens[0];
+
+            // Remove the selected token from the unclaimed pool
+            unclaimedTokens[0] = unclaimedTokens[unclaimedTokens.length - 1];
+            unclaimedTokens.pop();
+
+            // Mint the NFT
+            uint256 tokenId = _nextTokenId++;
+
+            _safeMint(_to, tokenId);
+            tokenToCryptoBottle[tokenId] = selectedTokenId;
+
+            // Emit CryptoBottleCreated event
+            emit CryptoBottleCreated(_to, tokenId, selectedTokenId);
+        }
     }
 
     /**
@@ -444,104 +407,25 @@ contract CryptoCuvee is
     }
 
     /**
-     * @dev The function to upgrade the contract
-     */
-    function _authorizeUpgrade(address) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
-
-    /**
-     * @dev The function to randomely select one token
-     * @param _category The category type
-     * @param _random The random value
-     * @param _to The address to mint to
-     * @param _requestId The request ID
-     */
-    function _invest(CategoryType _category, uint256 _random, address _to, uint256 _requestId) internal {
-        uint256[] storage unclaimedTokens = unclaimedBottlesByCategory[_category];
-
-        // Select a token ID based on randomness
-        uint256 randomIndex = _random % unclaimedTokens.length;
-        uint256 selectedTokenId = unclaimedTokens[randomIndex];
-
-        // Remove the selected token from the unclaimed pool
-        unclaimedTokens[randomIndex] = unclaimedTokens[unclaimedTokens.length - 1];
-        unclaimedTokens.pop();
-
-        uint256 tokenId = totalSupply() + 1;
-
-        // Mint the NFT
-        _safeMint(_to, tokenId);
-        tokenToCryptoBottle[tokenId] = selectedTokenId;
-
-        // Emit CryptoBottleCreated event
-        emit CryptoBottleCreated(_to, tokenId, selectedTokenId, _requestId);
-    }
-
-    /**
-     * @dev This function request random VRF words depending on the categoryType and tokenID
-     * @param categoryType The category type
-     * @param _quantity The quantity to mint
-     * @param _to The address to mint to
-     */
-    function _requestRandomWords(CategoryType categoryType, uint32 _quantity, address _to) internal {
-        uint256 requestId = coordinator.requestRandomWords(
-            VRFV2PlusClient.RandomWordsRequest({
-                keyHash: keyHash,
-                subId: s_subscriptionId,
-                requestConfirmations: requestConfirmations,
-                callbackGasLimit: callbackGasLimit,
-                numWords: _quantity,
-                extraArgs: VRFV2PlusClient._argsToBytes(VRFV2PlusClient.ExtraArgsV1({nativePayment: false}))
-            })
-        );
-
-        RandomRequestData memory randomRequestData =
-            RandomRequestData({categoryType: categoryType, quantity: _quantity, to: _to});
-        //console.log("Request ID: %d", requestId);
-        // Store the randomness request data
-        randomnessRequestData[requestId] = randomRequestData;
-    }
-
-    /**
-     * @dev Fulfill the randomness request
-     * @param requestId The request ID
-     * @param randomWords memory randomWords The random words
-     */
-    function fulfillRandomWords(uint256 requestId, uint256[] memory randomWords) internal override {
-        RandomRequestData memory requestData = randomnessRequestData[requestId];
-
-        for (uint256 i = 0; i < requestData.quantity; i++) {
-            _invest(requestData.categoryType, randomWords[i], requestData.to, requestId);
-        }
-
-        // Decrement pending mints by the number of mints that have just been completed
-        pendingMintsByCategory[requestData.categoryType] -= requestData.quantity;
-
-        delete randomnessRequestData[requestId];
-    }
-
-    /**
-     * @dev Override _update function from ERC721Upgradeable
+     * @dev Override _update function from ERC721
      * @param to The address to mint to
      * @param tokenId The token ID
      * @param auth address The address to mint from
      */
     function _update(address to, uint256 tokenId, address auth)
         internal
-        override(ERC721Upgradeable, ERC721EnumerableUpgradeable)
+        override(ERC721, ERC721Enumerable)
         returns (address)
     {
         return super._update(to, tokenId, auth);
     }
 
     /**
-     * @dev Override _increaseBalance function from ERC721Upgradeable and ERC721EnumerableUpgradeable
+     * @dev Override _increaseBalance function from ERC721 and ERC721Enumerable
      * @param account The account to increase the balance
      * @param value The value to increase
      */
-    function _increaseBalance(address account, uint128 value)
-        internal
-        override(ERC721Upgradeable, ERC721EnumerableUpgradeable)
-    {
+    function _increaseBalance(address account, uint128 value) internal override(ERC721, ERC721Enumerable) {
         super._increaseBalance(account, value);
     }
 
@@ -550,7 +434,7 @@ contract CryptoCuvee is
      * token will be the concatenation of the `baseURI` and the `tokenId`. Empty
      * by default, can be overridden in child contracts.
      */
-    function _baseURI() internal view override(ERC721Upgradeable) returns (string memory) {
+    function _baseURI() internal view override(ERC721) returns (string memory) {
         return baseURI;
     }
 }

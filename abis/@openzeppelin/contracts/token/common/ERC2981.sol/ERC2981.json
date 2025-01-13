@@ -1,0 +1,8 @@
+[
+  "error ERC2981InvalidDefaultRoyalty(uint256,uint256)",
+  "error ERC2981InvalidDefaultRoyaltyReceiver(address)",
+  "error ERC2981InvalidTokenRoyalty(uint256,uint256,uint256)",
+  "error ERC2981InvalidTokenRoyaltyReceiver(uint256,address)",
+  "function royaltyInfo(uint256,uint256) view returns (address, uint256)",
+  "function supportsInterface(bytes4) view returns (bool)"
+]

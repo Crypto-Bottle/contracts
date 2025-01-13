@@ -255,7 +255,7 @@ contract CryptoCuveeTest is Test {
         cryptoCuvee.changeMintingStatus();
         vm.expectRevert(abi.encodeWithSelector(CryptoCuvee.AllTokensWithdrawn.selector));
         cryptoCuvee.withdrawAllTokens();
-        
+
         // Check remaining balances
         assertEq(mockBTC.balanceOf(address(cryptoCuvee)), 0);
         assertEq(mockETH.balanceOf(address(cryptoCuvee)), 0);
@@ -317,9 +317,7 @@ contract CryptoCuveeTest is Test {
         vm.startPrank(user1);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                user1,
-                cryptoCuvee.DEFAULT_ADMIN_ROLE()
+                IAccessControl.AccessControlUnauthorizedAccount.selector, user1, cryptoCuvee.DEFAULT_ADMIN_ROLE()
             )
         );
         cryptoCuvee.withdrawUSDC();
@@ -330,9 +328,7 @@ contract CryptoCuveeTest is Test {
         vm.startPrank(user1);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                user1,
-                cryptoCuvee.DEFAULT_ADMIN_ROLE()
+                IAccessControl.AccessControlUnauthorizedAccount.selector, user1, cryptoCuvee.DEFAULT_ADMIN_ROLE()
             )
         );
         cryptoCuvee.changeMintingStatus();
@@ -394,9 +390,8 @@ contract CryptoCuveeTest is Test {
     function testUpgradeToAndCall() public {
         vm.startPrank(deployer);
         cryptoCuvee2 = new CryptoCuvee();
-        (bool success, ) = address(proxy).call(
-            abi.encodeWithSignature("upgradeToAndCall(address,bytes)", address(cryptoCuvee2), "")
-        );
+        (bool success,) =
+            address(proxy).call(abi.encodeWithSignature("upgradeToAndCall(address,bytes)", address(cryptoCuvee2), ""));
         require(success, "Upgrade failed");
         vm.stopPrank();
     }

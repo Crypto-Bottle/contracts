@@ -3,7 +3,10 @@
 pragma solidity ^0.8.23;
 
 // solhint-disable-next-line no-unused-import
-import {IVRFCoordinatorV2Plus, IVRFSubscriptionV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/interfaces/IVRFCoordinatorV2Plus.sol";
+import {
+    IVRFCoordinatorV2Plus,
+    IVRFSubscriptionV2Plus
+} from "@chainlink/contracts/src/v0.8/vrf/dev/interfaces/IVRFCoordinatorV2Plus.sol";
 import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
 import {SubscriptionAPIMock} from "./SubscriptionAPIMock.sol";
 import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
@@ -50,6 +53,7 @@ contract VRFCoordinatorV2_5Mock is SubscriptionAPIMock, IVRFCoordinatorV2Plus {
         uint32 numWords;
         bytes extraArgs;
     }
+
     mapping(uint256 => Request) internal s_requests; /* requestId */ /* request */
 
     constructor(uint96 _baseFee, uint96 _gasPrice, int256 _weiPerUnitLink) SubscriptionAPIMock() {
@@ -130,7 +134,7 @@ contract VRFCoordinatorV2_5Mock is SubscriptionAPIMock, IVRFCoordinatorV2Plus {
         bytes memory callReq = abi.encodeWithSelector(v.rawFulfillRandomWords.selector, _requestId, _words);
         s_config.reentrancyLock = true;
         // solhint-disable-next-line avoid-low-level-calls, no-unused-vars
-        (bool success, ) = _consumer.call{gas: req.callbackGasLimit}(callReq);
+        (bool success,) = _consumer.call{gas: req.callbackGasLimit}(callReq);
         s_config.reentrancyLock = false;
 
         bool nativePayment = uint8(req.extraArgs[req.extraArgs.length - 1]) == 1;
@@ -193,9 +197,13 @@ contract VRFCoordinatorV2_5Mock is SubscriptionAPIMock, IVRFCoordinatorV2Plus {
         return abi.decode(extraArgs[4:], (VRFV2PlusClient.ExtraArgsV1));
     }
 
-    function requestRandomWords(
-        VRFV2PlusClient.RandomWordsRequest calldata _req
-    ) external override nonReentrant onlyValidConsumer(_req.subId, msg.sender) returns (uint256) {
+    function requestRandomWords(VRFV2PlusClient.RandomWordsRequest calldata _req)
+        external
+        override
+        nonReentrant
+        onlyValidConsumer(_req.subId, msg.sender)
+        returns (uint256)
+    {
         uint256 subId = _req.subId;
         if (s_subscriptionConfigs[subId].owner == address(0)) {
             revert InvalidSubscription();
@@ -229,10 +237,13 @@ contract VRFCoordinatorV2_5Mock is SubscriptionAPIMock, IVRFCoordinatorV2Plus {
     /**
      * @inheritdoc IVRFSubscriptionV2Plus
      */
-    function removeConsumer(
-        uint256 _subId,
-        address _consumer
-    ) external override onlySubOwner(_subId) onlyValidConsumer(_subId, _consumer) nonReentrant {
+    function removeConsumer(uint256 _subId, address _consumer)
+        external
+        override
+        onlySubOwner(_subId)
+        onlyValidConsumer(_subId, _consumer)
+        nonReentrant
+    {
         if (!s_consumers[_consumer][_subId].active) {
             revert InvalidConsumer(_subId, _consumer);
         }
@@ -256,14 +267,14 @@ contract VRFCoordinatorV2_5Mock is SubscriptionAPIMock, IVRFCoordinatorV2Plus {
     function cancelSubscription(uint256 _subId, address _to) external override onlySubOwner(_subId) nonReentrant {
         (uint96 balance, uint96 nativeBalance) = _deleteSubscription(_subId);
 
-        (bool success, ) = _to.call{value: uint256(nativeBalance)}("");
+        (bool success,) = _to.call{value: uint256(nativeBalance)}("");
         if (!success) {
             revert FailedToSendNative();
         }
         emit SubscriptionCanceled(_subId, _to, balance, nativeBalance);
     }
 
-    function pendingRequestExists(uint256 /*subId*/) public pure override returns (bool) {
+    function pendingRequestExists(uint256 /*subId*/ ) public pure override returns (bool) {
         revert NotImplemented();
     }
 }
