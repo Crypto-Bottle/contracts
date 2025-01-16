@@ -31,7 +31,7 @@ contract CryptoCuveeV3 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
     error AllTokensWithdrawn();
     error BottlesAlreadyFilled();
     error InvalidCategory();
-    error InvalidUSDCAddress();
+    error InvalidStableCoinAddress();
     error InvalidSystemWallet();
     error InvalidAdminAddress();
     error ParametersLengthMismatch();
@@ -47,9 +47,9 @@ contract CryptoCuveeV3 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
     uint256 private _nextTokenId;
 
     /**
-     * @dev The USDC token address
+     * @dev The stable coin token address
      */
-    IERC20 public usdc;
+    IERC20 public stableCoin;
 
     /**
      * @dev Base URI for computing {tokenURI}
@@ -68,7 +68,7 @@ contract CryptoCuveeV3 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
 
     /**
      * @notice Represents a category of bottles with specific price, token allocations, and minting limits
-     * @param price The price in USDC to mint a bottle in this category
+     * @param price The stable coin price to mint a bottle in this category
      * @param tokens Array of ERC20 tokens included in this bottle category
      * @param totalBottles Maximum number of bottles that can be minted in this category
      * @param mintedBottles Current number of bottles minted in this category
@@ -93,7 +93,7 @@ contract CryptoCuveeV3 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
     }
 
     /**
-     * @dev System wallet role, can mint without USDC payment
+     * @dev System wallet role, can mint without stable coin payment
      */
     bytes32 public constant SYSTEM_WALLET_ROLE = keccak256("SYSTEM_WALLET_ROLE");
 
@@ -179,7 +179,7 @@ contract CryptoCuveeV3 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
 
     /**
      * @notice Initializes the CryptoBottle contract with category configurations and administrative settings
-     * @param _usdc Address of the USDC token used for payments
+     * @param _stableCoin Address of the stable coin token used for payments
      * @param _prices Array of prices for each category
      * @param _totalBottles Array of total bottle limits for each category
      * @param _categoryTokens Nested array of token configurations for each category
@@ -188,7 +188,7 @@ contract CryptoCuveeV3 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
      * @param admin Address to receive admin privileges
      */
     constructor(
-        IERC20 _usdc,
+        IERC20 _stableCoin,
         uint256[] memory _prices,
         uint256[] memory _totalBottles,
         Token[][] memory _categoryTokens,
@@ -196,7 +196,7 @@ contract CryptoCuveeV3 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
         address systemWallet,
         address admin
     ) ERC721("CryptoCuvee", "CCV") {
-        if (address(_usdc) == address(0)) revert InvalidUSDCAddress();
+        if (address(_stableCoin) == address(0)) revert InvalidStableCoinAddress();
         if (systemWallet == address(0)) revert InvalidSystemWallet();
         if (admin == address(0)) revert InvalidAdminAddress();
         if (_prices.length != _totalBottles.length || _prices.length != _categoryTokens.length) {
@@ -208,7 +208,7 @@ contract CryptoCuveeV3 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
 
         _nextTokenId = 1;
         mintingClosed = true;
-        usdc = _usdc;
+        stableCoin = _stableCoin;
         baseURI = _baseUri;
         maxQuantityMintable = 3;
 
@@ -273,7 +273,7 @@ contract CryptoCuveeV3 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
 
     /**
      * @notice Mints new bottles to a specified address
-     * @dev System wallet can mint without USDC payment
+     * @dev System wallet can mint without stable coin payment
      * @param _to Address to receive the minted bottles
      * @param _quantity Number of bottles to mint
      * @param _categoryId Category index of bottles to mint
@@ -305,9 +305,9 @@ contract CryptoCuveeV3 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
             category.mintedBottles++;
         }
 
-        // Handle USDC payment if not system wallet
+        // Handle stable coin payment if not system wallet
         if (!hasRole(SYSTEM_WALLET_ROLE, _msgSender())) {
-            SafeERC20.safeTransferFrom(usdc, _msgSender(), address(this), category.price * _quantity);
+            SafeERC20.safeTransferFrom(stableCoin, _msgSender(), address(this), category.price * _quantity);
         }
 
         // Mint tokens
@@ -339,10 +339,10 @@ contract CryptoCuveeV3 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
     }
 
     /**
-     * @dev Whitdraw the USDC from the contract
+     * @dev Whitdraw the stable coin from the contract
      */
-    function withdrawUSDC() external nonReentrant onlyRole(DEFAULT_ADMIN_ROLE) {
-        SafeERC20.safeTransfer(usdc, _msgSender(), usdc.balanceOf(address(this)));
+    function withdrawStableCoin() external nonReentrant onlyRole(DEFAULT_ADMIN_ROLE) {
+        SafeERC20.safeTransfer(stableCoin, _msgSender(), stableCoin.balanceOf(address(this)));
     }
 
     /**

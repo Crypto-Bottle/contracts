@@ -8,7 +8,7 @@ import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol"
 
 contract CryptoCuveeV3Test is Test {
     CryptoCuveeV3 cryptoCuveeV3;
-    MockERC20 mockUSDC;
+    MockERC20 mockStableCoin;
     MockERC20 mockBTC;
     MockERC20 mockETH;
     MockERC20 mockLINK;
@@ -32,7 +32,7 @@ contract CryptoCuveeV3Test is Test {
         user2 = makeAddr("user2");
 
         // Deploy mock tokens
-        mockUSDC = new MockERC20("Mock USDC", "mUSDC");
+        mockStableCoin = new MockERC20("Mock Stable Coin", "mStableCoin");
         mockBTC = new MockERC20("Mock BTC", "mBTC");
         mockETH = new MockERC20("Mock ETH", "mETH");
         mockLINK = new MockERC20("Mock LINK", "mLINK");
@@ -69,7 +69,7 @@ contract CryptoCuveeV3Test is Test {
 
         // Deploy CryptoCuveeV3
         cryptoCuveeV3 = new CryptoCuveeV3(
-            mockUSDC, prices, totalBottles, categoryTokens, "https://test.com/", systemWallet, address(deployer)
+            mockStableCoin, prices, totalBottles, categoryTokens, "https://test.com/", systemWallet, address(deployer)
         );
 
         // Approve mock tokens after deployment
@@ -138,21 +138,21 @@ contract CryptoCuveeV3Test is Test {
         vm.stopPrank();
     }
 
-    /// @notice Tests minting process for a regular user with USDC
+    /// @notice Tests minting process for a regular user with stable coin
     function testMintCryptoBottleUser1() public {
         vm.startPrank(user1);
-        mockUSDC.mint(user1, 100 ether);
-        mockUSDC.approve(address(cryptoCuveeV3), 100 ether);
+        mockStableCoin.mint(user1, 100 ether);
+        mockStableCoin.approve(address(cryptoCuveeV3), 100 ether);
         cryptoCuveeV3.mint(user1, 1, 0); // Rouge
-        assertEq(mockUSDC.balanceOf(user1), 100 ether - 10 ether);
+        assertEq(mockStableCoin.balanceOf(user1), 100 ether - 10 ether);
         vm.stopPrank();
     }
 
     /// @notice Tests opening a single bottle
     function testOpenBottle() public {
         vm.startPrank(user1);
-        mockUSDC.mint(user1, 100 ether);
-        mockUSDC.approve(address(cryptoCuveeV3), 100 ether);
+        mockStableCoin.mint(user1, 100 ether);
+        mockStableCoin.approve(address(cryptoCuveeV3), 100 ether);
         cryptoCuveeV3.mint(user1, 1, 0);
         cryptoCuveeV3.openBottle(1);
         vm.stopPrank();
@@ -162,8 +162,8 @@ contract CryptoCuveeV3Test is Test {
     function testOpenMultipleBottles() public {
         // Setup: Mint 2 bottles to user1
         vm.startPrank(user1);
-        mockUSDC.mint(user1, 100 ether);
-        mockUSDC.approve(address(cryptoCuveeV3), 100 ether);
+        mockStableCoin.mint(user1, 100 ether);
+        mockStableCoin.approve(address(cryptoCuveeV3), 100 ether);
         cryptoCuveeV3.mint(user1, 1, 0); // Mint Rouge (tokenId 1)
         cryptoCuveeV3.mint(user1, 1, 1); // Mint Champagne (tokenId 2)
 
@@ -198,8 +198,8 @@ contract CryptoCuveeV3Test is Test {
     /// @notice Verifies that non-owners cannot open bottles
     function testRevertOpenBottleNotOwner() public {
         vm.startPrank(user1);
-        mockUSDC.mint(user1, 100 ether);
-        mockUSDC.approve(address(cryptoCuveeV3), 100 ether);
+        mockStableCoin.mint(user1, 100 ether);
+        mockStableCoin.approve(address(cryptoCuveeV3), 100 ether);
         cryptoCuveeV3.mint(user1, 1, 0);
         vm.stopPrank();
 
@@ -212,8 +212,8 @@ contract CryptoCuveeV3Test is Test {
     /// @notice Ensures a bottle cannot be opened twice
     function testRevertOpenBottleTwice() public {
         vm.startPrank(user1);
-        mockUSDC.mint(user1, 100 ether);
-        mockUSDC.approve(address(cryptoCuveeV3), 100 ether);
+        mockStableCoin.mint(user1, 100 ether);
+        mockStableCoin.approve(address(cryptoCuveeV3), 100 ether);
         cryptoCuveeV3.mint(user1, 1, 0);
         cryptoCuveeV3.openBottle(1);
         vm.expectRevert(abi.encodeWithSelector(CryptoCuveeV3.BottleAlreadyOpened.selector, 1));
@@ -221,24 +221,24 @@ contract CryptoCuveeV3Test is Test {
         vm.stopPrank();
     }
 
-    /// @notice Tests minting then  withdrawing USDC by owner
+    /// @notice Tests minting then  withdrawing stable coin by owner
     function testMintAndWithdraw() public {
         vm.startPrank(user1);
-        mockUSDC.mint(user1, 100 ether);
-        mockUSDC.approve(address(cryptoCuveeV3), 100 ether);
+        mockStableCoin.mint(user1, 100 ether);
+        mockStableCoin.approve(address(cryptoCuveeV3), 100 ether);
         cryptoCuveeV3.mint(user1, 1, 0);
         vm.stopPrank();
 
         vm.startPrank(deployer);
-        cryptoCuveeV3.withdrawUSDC();
+        cryptoCuveeV3.withdrawStableCoin();
         vm.stopPrank();
     }
 
     /// @notice Tests withdrawing all tokens after closing minting
     function testWithdrawAllTokens() public {
         vm.startPrank(user1);
-        mockUSDC.mint(user1, 100 ether);
-        mockUSDC.approve(address(cryptoCuveeV3), 100 ether);
+        mockStableCoin.mint(user1, 100 ether);
+        mockStableCoin.approve(address(cryptoCuveeV3), 100 ether);
         cryptoCuveeV3.mint(user1, 1, 0);
         cryptoCuveeV3.mint(user1, 1, 1);
         cryptoCuveeV3.openBottle(1);
@@ -262,8 +262,8 @@ contract CryptoCuveeV3Test is Test {
     /// @notice Verifies tokens cannot be withdrawn while minting is still active
     function testRevertWithdrawAllTokensMintingNotClosed() public {
         vm.startPrank(user1);
-        mockUSDC.mint(user1, 100 ether);
-        mockUSDC.approve(address(cryptoCuveeV3), 100 ether);
+        mockStableCoin.mint(user1, 100 ether);
+        mockStableCoin.approve(address(cryptoCuveeV3), 100 ether);
         cryptoCuveeV3.mint(user1, 1, 0);
         cryptoCuveeV3.openBottle(1);
         vm.stopPrank();
@@ -277,8 +277,8 @@ contract CryptoCuveeV3Test is Test {
     /// @notice Tests minting and retrieving token information
     function testMintAndRetrieveTokens() public {
         vm.startPrank(user1);
-        mockUSDC.mint(user1, 100 ether);
-        mockUSDC.approve(address(cryptoCuveeV3), 100 ether);
+        mockStableCoin.mint(user1, 100 ether);
+        mockStableCoin.approve(address(cryptoCuveeV3), 100 ether);
         cryptoCuveeV3.mint(user1, 1, 0);
         tokens = cryptoCuveeV3.getCryptoBottleTokens(1);
 
@@ -296,22 +296,22 @@ contract CryptoCuveeV3Test is Test {
     /// @notice Ensures minting with zero quantity fails
     function testRevertMintZeroQuantity() public {
         vm.startPrank(user1);
-        mockUSDC.mint(user1, 100 ether);
-        mockUSDC.approve(address(cryptoCuveeV3), 100 ether);
+        mockStableCoin.mint(user1, 100 ether);
+        mockStableCoin.approve(address(cryptoCuveeV3), 100 ether);
         vm.expectRevert(abi.encodeWithSelector(CryptoCuveeV3.QuantityMustBeGreaterThanZero.selector));
         cryptoCuveeV3.mint(user1, 0, 0);
         vm.stopPrank();
     }
 
-    /// @notice Verifies that unauthorized accounts cannot withdraw USDC
-    function testRevertWithdrawUSDCWithoutRole() public {
+    /// @notice Verifies that unauthorized accounts cannot withdraw stable coin
+    function testRevertWithdrawStableCoinWithoutRole() public {
         vm.startPrank(user1);
         vm.expectRevert(
             abi.encodeWithSelector(
                 IAccessControl.AccessControlUnauthorizedAccount.selector, user1, cryptoCuveeV3.DEFAULT_ADMIN_ROLE()
             )
         );
-        cryptoCuveeV3.withdrawUSDC();
+        cryptoCuveeV3.withdrawStableCoin();
         vm.stopPrank();
     }
 
@@ -342,8 +342,8 @@ contract CryptoCuveeV3Test is Test {
     /// @notice Tests correct token URI generation
     function testTokenURI() public {
         vm.startPrank(user1);
-        mockUSDC.mint(user1, 100 ether);
-        mockUSDC.approve(address(cryptoCuveeV3), 100 ether);
+        mockStableCoin.mint(user1, 100 ether);
+        mockStableCoin.approve(address(cryptoCuveeV3), 100 ether);
         cryptoCuveeV3.mint(user1, 1, 0);
         string memory uri = cryptoCuveeV3.tokenURI(1);
         assertTrue(keccak256(abi.encodePacked(uri)) == keccak256(abi.encodePacked("https://test.com/1")));
