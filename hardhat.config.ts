@@ -84,7 +84,7 @@ const config: HardhatUserConfig = {
   solidity: {
     // Only use Solidity default versions `>=0.8.20` for EVM networks that support the opcode `PUSH0`
     // Otherwise, use the versions `<=0.8.19`
-    version: "0.8.23",
+    version: "0.8.28",
     settings: {
       optimizer: {
         enabled: true,
@@ -758,8 +758,9 @@ const config: HardhatUserConfig = {
         network: "polygonAmoy",
         chainId: 80002,
         urls: {
-          apiURL: "https://www.oklink.com/api/explorer/v1/contract/verify/async/api/polygonAmoy",
-          browserURL: "https://www.oklink.com/polygonAmoy"
+          apiURL:
+            "https://www.oklink.com/api/explorer/v1/contract/verify/async/api/polygonAmoy",
+          browserURL: "https://www.oklink.com/polygonAmoy",
         },
       },
       {
