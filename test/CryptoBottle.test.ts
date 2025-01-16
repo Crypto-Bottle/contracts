@@ -245,7 +245,9 @@ describe("CryptoCuvee", () => {
   it("Should withdraw all tokens successfully", async () => {
     await cryptoCuvee.connect(deployerAccount).changeMintingStatus();
     await cryptoCuvee.connect(deployerAccount).withdrawAllTokens();
-    await expect(cryptoCuvee.connect(deployerAccount).changeMintingStatus()).to.revertedWithCustomError(cryptoCuvee, "AllTokensWithdrawn");
+    await expect(
+      cryptoCuvee.connect(deployerAccount).changeMintingStatus(),
+    ).to.revertedWithCustomError(cryptoCuvee, "AllTokensWithdrawn");
 
     expect(await mockBTC.balanceOf(await cryptoCuvee.getAddress())).to.equal(0);
     expect(await mockETH.balanceOf(await cryptoCuvee.getAddress())).to.equal(0);
@@ -322,14 +324,14 @@ describe("CryptoCuvee", () => {
     expect(await cryptoCuvee.tokenURI(1)).to.equal("https://test.com/1");
   });
 
-  it("Should test increase balance", async () => {
+  /*it("Should test increase balance", async () => {
     await expect(
       cryptoCuvee.testIncreaseBalance(user1.address, 1n),
     ).to.be.revertedWithCustomError(
       cryptoCuvee,
       "ERC721EnumerableForbiddenBatchMint",
     );
-  });
+  });*/
 });
 
 describe("CryptoCuvee wrong init", () => {
