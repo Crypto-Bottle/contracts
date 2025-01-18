@@ -214,8 +214,8 @@ contract CryptoCuveeV3 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
 
         // Initialize Categories
         for (uint256 i = 0; i < _prices.length; i++) {
-            if (_prices[i] <= 0) revert InvalidPrice();
-            if (_totalBottles[i] <= 0) revert InvalidTotalBottles();
+            if (_totalBottles[i] > 0 && _prices[i] <= 0) revert InvalidPrice();
+            if (_totalBottles[i] <= 0 && _prices[i] > 0) revert InvalidTotalBottles();
 
             categories.push();
             Category storage newCategory = categories[i];

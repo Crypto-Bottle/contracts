@@ -42,16 +42,20 @@ contract CryptoCuveeV3Test is Test {
         mockETH.mint(deployer, 200 ether);
 
         // Prepare category prices and total bottles
-        uint256[] memory prices = new uint256[](2);
+        uint256[] memory prices = new uint256[](4);
         prices[0] = 10 ether; // Rouge price
-        prices[1] = 5 ether; // Champagne price
+        prices[1] = 0; // Blanc price
+        prices[2] = 0; // Rosé price
+        prices[3] = 5 ether; // Champagne price
 
-        uint256[] memory totalBottles = new uint256[](2);
+        uint256[] memory totalBottles = new uint256[](4);
         totalBottles[0] = 1; // Rouge total bottles
-        totalBottles[1] = 1; // Champagne total bottles
+        totalBottles[1] = 0; // Blanc total bottles
+        totalBottles[2] = 0; // Rosé total bottles
+        totalBottles[3] = 1; // Champagne total bottles
 
         // Prepare tokens for each category
-        CryptoCuveeV3.Token[][] memory categoryTokens = new CryptoCuveeV3.Token[][](2);
+        CryptoCuveeV3.Token[][] memory categoryTokens = new CryptoCuveeV3.Token[][](4);
 
         // Rouge category tokens
         categoryTokens[0] = new CryptoCuveeV3.Token[](2);
@@ -60,11 +64,17 @@ contract CryptoCuveeV3Test is Test {
         categoryTokens[0][1] =
             CryptoCuveeV3.Token({name: "mETH", tokenAddress: address(mockETH), quantity: ROUGE_ETH_QUANTITY});
 
+        // Blanc category tokens
+        categoryTokens[1] = new CryptoCuveeV3.Token[](0);
+
+        // Rosé category tokens
+        categoryTokens[2] = new CryptoCuveeV3.Token[](0);
+
         // Champagne category tokens
-        categoryTokens[1] = new CryptoCuveeV3.Token[](2);
-        categoryTokens[1][0] =
+        categoryTokens[3] = new CryptoCuveeV3.Token[](2);
+        categoryTokens[3][0] =
             CryptoCuveeV3.Token({name: "mBTC", tokenAddress: address(mockBTC), quantity: CHAMPAGNE_BTC_QUANTITY});
-        categoryTokens[1][1] =
+        categoryTokens[3][1] =
             CryptoCuveeV3.Token({name: "mETH", tokenAddress: address(mockETH), quantity: CHAMPAGNE_ETH_QUANTITY});
 
         // Deploy CryptoCuveeV3
@@ -101,7 +111,7 @@ contract CryptoCuveeV3Test is Test {
     /// @notice Tests minting Champagne bottle by system wallet
     function testMintCryptoBottleChampagneSystemWallet() public {
         vm.startPrank(systemWallet);
-        cryptoCuveeV3.mint(user1, 1, 1); // Category 1 (Champagne)
+        cryptoCuveeV3.mint(user1, 1, 3); // Category 3 (Champagne)
         vm.stopPrank();
     }
 
@@ -124,7 +134,7 @@ contract CryptoCuveeV3Test is Test {
     function testMintTwiceAndCheckTotalSupply() public {
         vm.startPrank(systemWallet);
         cryptoCuveeV3.mint(user1, 1, 0); // Rouge
-        cryptoCuveeV3.mint(user2, 1, 1); // Champagne
+        cryptoCuveeV3.mint(user2, 1, 3); // Champagne
         assertEq(cryptoCuveeV3.totalSupply(), 2);
         vm.stopPrank();
     }
@@ -165,7 +175,7 @@ contract CryptoCuveeV3Test is Test {
         mockStableCoin.mint(user1, 100 ether);
         mockStableCoin.approve(address(cryptoCuveeV3), 100 ether);
         cryptoCuveeV3.mint(user1, 1, 0); // Mint Rouge (tokenId 1)
-        cryptoCuveeV3.mint(user1, 1, 1); // Mint Champagne (tokenId 2)
+        cryptoCuveeV3.mint(user1, 1, 3); // Mint Champagne (tokenId 2)
 
         // Create array of token IDs to open
         uint256[] memory tokenIds = new uint256[](2);
@@ -240,7 +250,7 @@ contract CryptoCuveeV3Test is Test {
         mockStableCoin.mint(user1, 100 ether);
         mockStableCoin.approve(address(cryptoCuveeV3), 100 ether);
         cryptoCuveeV3.mint(user1, 1, 0);
-        cryptoCuveeV3.mint(user1, 1, 1);
+        cryptoCuveeV3.mint(user1, 1, 3);
         cryptoCuveeV3.openBottle(1);
         vm.stopPrank();
 
