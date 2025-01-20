@@ -3,7 +3,8 @@ pragma solidity ^0.8.4;
 
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-/** ****************************************************************************
+/**
+ *
  * @notice Interface for contracts using VRF randomness
  * *****************************************************************************
  * @dev PURPOSE
@@ -98,6 +99,7 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
  */
 abstract contract VRFConsumerBaseV2Upgradeable is Initializable {
     error OnlyCoordinatorCanFulfill(address have, address want);
+
     address private vrfCoordinator;
 
     function __VRFConsumerBaseV2Upgradeable_init(address _vrfCoordinator) internal onlyInitializing {

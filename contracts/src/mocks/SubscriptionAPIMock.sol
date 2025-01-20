@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.23;
+pragma solidity 0.8.28;
 
-import {EnumerableSet} from "@chainlink/contracts/src/v0.8/vendor/openzeppelin-solidity/v4.7.3/contracts/utils/structs/EnumerableSet.sol";
+import {EnumerableSet} from
+    "@chainlink/contracts/src/v0.8/vendor/openzeppelin-solidity/v4.7.3/contracts/utils/structs/EnumerableSet.sol";
 import {LinkTokenInterface} from "@chainlink/contracts/src/v0.8/shared/interfaces/LinkTokenInterface.sol";
 import {ConfirmedOwner} from "@chainlink/contracts/src/v0.8/shared/access/ConfirmedOwner.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
@@ -20,6 +21,7 @@ abstract contract SubscriptionAPIMock is ConfirmedOwner, IERC677Receiver, IVRFSu
     // This bound ensures we are able to loop over them as needed.
     // Should a user require more consumers, they can use multiple subscriptions.
     uint16 public constant MAX_CONSUMERS = 100;
+
     error TooManyConsumers();
     error InsufficientBalance();
     error InvalidConsumer(uint256 subId, address consumer);
@@ -30,8 +32,10 @@ abstract contract SubscriptionAPIMock is ConfirmedOwner, IERC677Receiver, IVRFSu
     error PendingRequestExists();
     error MustBeRequestedOwner(address proposedOwner);
     error BalanceInvariantViolated(uint256 internalBalance, uint256 externalBalance); // Should never happen
+
     event FundsRecovered(address to, uint256 amount);
     event NativeFundsRecovered(address to, uint256 amount);
+
     error LinkAlreadySet();
     error FailedToSendNative();
     error FailedToTransferLink();
@@ -49,6 +53,7 @@ abstract contract SubscriptionAPIMock is ConfirmedOwner, IERC677Receiver, IVRFSu
         uint64 reqCount;
     }
     // We use the config for the mgmt APIs
+
     struct SubscriptionConfig {
         address owner; // Owner can fund/withdraw/cancel the sub.
         address requestedOwner; // For safely transferring sub ownership.
@@ -60,12 +65,14 @@ abstract contract SubscriptionAPIMock is ConfirmedOwner, IERC677Receiver, IVRFSu
         // consumer is valid without reading all the consumers from storage.
         address[] consumers;
     }
+
     struct ConsumerConfig {
         bool active;
         uint64 nonce;
         uint64 pendingReqCount;
     }
     // Note a nonce of 0 indicates the consumer is not assigned to that subscription.
+
     mapping(address => mapping(uint256 => ConsumerConfig)) /* consumerAddress */ /* subId */ /* consumerConfig */
         internal s_consumers;
     mapping(uint256 => SubscriptionConfig) /* subId */ /* subscriptionConfig */ internal s_subscriptionConfigs;
@@ -134,9 +141,11 @@ abstract contract SubscriptionAPIMock is ConfirmedOwner, IERC677Receiver, IVRFSu
         // linkPremiumPercentage = 10 means 10% of the total gas costs is added. only integral percentage is allowed
         uint8 linkPremiumPercentage;
     }
+
     Config public s_config;
 
     error Reentrant();
+
     modifier nonReentrant() {
         _nonReentrant();
         _;
@@ -218,7 +227,7 @@ abstract contract SubscriptionAPIMock is ConfirmedOwner, IERC677Receiver, IVRFSu
         }
         if (internalBalance < externalBalance) {
             uint256 amount = externalBalance - internalBalance;
-            (bool sent, ) = to.call{value: amount}("");
+            (bool sent,) = to.call{value: amount}("");
             if (!sent) {
                 revert FailedToSendNative();
             }
@@ -260,13 +269,17 @@ abstract contract SubscriptionAPIMock is ConfirmedOwner, IERC677Receiver, IVRFSu
         uint96 amount = s_withdrawableNative;
         s_withdrawableNative -= amount;
         s_totalNativeBalance -= amount;
-        (bool sent, ) = recipient.call{value: amount}("");
+        (bool sent,) = recipient.call{value: amount}("");
         if (!sent) {
             revert FailedToSendNative();
         }
     }
 
-    function onTokenTransfer(address /* sender */, uint256 amount, bytes calldata data) external override nonReentrant {
+    function onTokenTransfer(address, /* sender */ uint256 amount, bytes calldata data)
+        external
+        override
+        nonReentrant
+    {
         if (msg.sender != address(LINK)) {
             revert OnlyCallableFromLink();
         }
@@ -305,9 +318,7 @@ abstract contract SubscriptionAPIMock is ConfirmedOwner, IERC677Receiver, IVRFSu
     /**
      * @inheritdoc IVRFSubscriptionV2Plus
      */
-    function getSubscription(
-        uint256 subId
-    )
+    function getSubscription(uint256 subId)
         public
         view
         override
@@ -329,10 +340,12 @@ abstract contract SubscriptionAPIMock is ConfirmedOwner, IERC677Receiver, IVRFSu
     /**
      * @inheritdoc IVRFSubscriptionV2Plus
      */
-    function getActiveSubscriptionIds(
-        uint256 startIndex,
-        uint256 maxCount
-    ) external view override returns (uint256[] memory ids) {
+    function getActiveSubscriptionIds(uint256 startIndex, uint256 maxCount)
+        external
+        view
+        override
+        returns (uint256[] memory ids)
+    {
         uint256 numSubs = s_subIds.length();
         if (startIndex >= numSubs) revert IndexOutOfRange();
         uint256 endIndex = startIndex + maxCount;
@@ -358,11 +371,8 @@ abstract contract SubscriptionAPIMock is ConfirmedOwner, IERC677Receiver, IVRFSu
         // Initialize storage variables.
         address[] memory consumers = new address[](0);
         s_subscriptions[subId] = Subscription({balance: 0, nativeBalance: 0, reqCount: 0});
-        s_subscriptionConfigs[subId] = SubscriptionConfig({
-            owner: msg.sender,
-            requestedOwner: address(0),
-            consumers: consumers
-        });
+        s_subscriptionConfigs[subId] =
+            SubscriptionConfig({owner: msg.sender, requestedOwner: address(0), consumers: consumers});
         // Update the s_subIds set, which tracks all subscription ids created in this contract.
         s_subIds.add(subId);
 
@@ -373,10 +383,12 @@ abstract contract SubscriptionAPIMock is ConfirmedOwner, IERC677Receiver, IVRFSu
     /**
      * @inheritdoc IVRFSubscriptionV2Plus
      */
-    function requestSubscriptionOwnerTransfer(
-        uint256 subId,
-        address newOwner
-    ) external override onlySubOwner(subId) nonReentrant {
+    function requestSubscriptionOwnerTransfer(uint256 subId, address newOwner)
+        external
+        override
+        onlySubOwner(subId)
+        nonReentrant
+    {
         // Proposing to address(0) would never be claimable so don't need to check.
         SubscriptionConfig storage subscriptionConfig = s_subscriptionConfigs[subId];
         if (subscriptionConfig.requestedOwner != newOwner) {
@@ -458,7 +470,7 @@ abstract contract SubscriptionAPIMock is ConfirmedOwner, IERC677Receiver, IVRFSu
         }
 
         // send native to the "to" address using call
-        (bool success, ) = to.call{value: uint256(nativeBalance)}("");
+        (bool success,) = to.call{value: uint256(nativeBalance)}("");
         if (!success) {
             revert FailedToSendNative();
         }
