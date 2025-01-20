@@ -88,6 +88,8 @@ contract CryptoCuveeV2Test is Test {
 
         // Fill bottles
         cryptoCuveeV2.fillBottles();
+        // Open minting
+        cryptoCuveeV2.changeMintStatus();
     }
 
     /// @notice Verifies system wallet role was correctly assigned during initialization
@@ -255,10 +257,10 @@ contract CryptoCuveeV2Test is Test {
         vm.stopPrank();
 
         vm.startPrank(deployer);
-        cryptoCuveeV2.changeMintingStatus();
+        cryptoCuveeV2.changeMintStatus();
         cryptoCuveeV2.withdrawAllTokens();
         vm.expectRevert(abi.encodeWithSelector(CryptoCuveeV2.AllTokensWithdrawn.selector));
-        cryptoCuveeV2.changeMintingStatus();
+        cryptoCuveeV2.changeMintStatus();
         vm.expectRevert(abi.encodeWithSelector(CryptoCuveeV2.AllTokensWithdrawn.selector));
         cryptoCuveeV2.withdrawAllTokens();
 
@@ -279,7 +281,7 @@ contract CryptoCuveeV2Test is Test {
         vm.stopPrank();
 
         vm.startPrank(deployer);
-        vm.expectRevert(abi.encodeWithSelector(CryptoCuveeV2.MintingNotClosed.selector));
+        vm.expectRevert(abi.encodeWithSelector(CryptoCuveeV2.MintNotClosed.selector));
         cryptoCuveeV2.withdrawAllTokens();
         vm.stopPrank();
     }
@@ -326,25 +328,25 @@ contract CryptoCuveeV2Test is Test {
     }
 
     /// @notice Ensures unauthorized accounts cannot change minting status
-    function testRevertchangeMintingStatusWithoutRole() public {
+    function testRevertchangeMintStatusWithoutRole() public {
         vm.startPrank(user1);
         vm.expectRevert(
             abi.encodeWithSelector(
                 IAccessControl.AccessControlUnauthorizedAccount.selector, user1, cryptoCuveeV2.DEFAULT_ADMIN_ROLE()
             )
         );
-        cryptoCuveeV2.changeMintingStatus();
+        cryptoCuveeV2.changeMintStatus();
         vm.stopPrank();
     }
 
     /// @notice Tests successful minting status change and subsequent mint rejection
-    function testChangeMintingStatusSuccessfully() public {
+    function testChangeMintStatusSuccessfully() public {
         vm.startPrank(deployer);
-        cryptoCuveeV2.changeMintingStatus();
+        cryptoCuveeV2.changeMintStatus();
         vm.stopPrank();
 
         vm.startPrank(user1);
-        vm.expectRevert(abi.encodeWithSelector(CryptoCuveeV2.MintingClosed.selector));
+        vm.expectRevert(abi.encodeWithSelector(CryptoCuveeV2.MintClosed.selector));
         cryptoCuveeV2.mint(user1, 1, 0);
         vm.stopPrank();
     }
@@ -384,9 +386,9 @@ contract CryptoCuveeV2Test is Test {
         assertTrue(isSupported);
     }
 
-    /// @notice Tests setting default royalty by system wallet
+    /// @notice Tests setting default royalty by admin wallet
     function testSetDefaultRoyalty() public {
-        vm.startPrank(systemWallet);
+        vm.startPrank(deployer);
         cryptoCuveeV2.setDefaultRoyalty(user1, 10);
         vm.stopPrank();
     }
@@ -398,7 +400,7 @@ contract CryptoCuveeV2Test is Test {
             abi.encodeWithSelector(
                 IAccessControl.AccessControlUnauthorizedAccount.selector,
                 address(user1),
-                cryptoCuveeV2.SYSTEM_WALLET_ROLE()
+                cryptoCuveeV2.DEFAULT_ADMIN_ROLE()
             )
         );
         cryptoCuveeV2.setDefaultRoyalty(user1, 10);

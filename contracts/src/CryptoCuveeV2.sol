@@ -21,12 +21,12 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
      * @dev Custom error messages
      */
     error InsufficientTokenBalance(address tokenAddress, uint256 tokenBalance);
-    error MintingClosed();
+    error MintClosed();
     error CategoryFullyMinted();
     error MaxQuantityReached();
     error BottleAlreadyOpened(uint256 tokenId);
     error QuantityMustBeGreaterThanZero();
-    error MintingNotClosed();
+    error MintNotClosed();
     error NotOwnerBottle(uint256 tokenId);
     error AllTokensWithdrawn();
     error BottlesAlreadyFilled();
@@ -67,7 +67,7 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
     uint256 private constant NFT_BOX_SHARE = 10;
 
     /**
-     * @notice Represents a category of bottles with specific price, token allocations, and minting limits
+     * @notice Represents a category of bottles with specific price, token allocations, and mint limits
      * @param price The stable coin price to mint a bottle in this category
      * @param tokens Array of ERC20 tokens included in this bottle category
      * @param totalBottles Maximum number of bottles that can be minted in this category
@@ -100,7 +100,7 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
     /**
      * @dev Mint status
      */
-    bool public mintingClosed;
+    bool public mintClosed;
 
     /**
      * @dev All tokens withdrawn
@@ -207,7 +207,7 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
         _grantRole(SYSTEM_WALLET_ROLE, systemWallet);
 
         _nextTokenId = 1;
-        mintingClosed = true;
+        mintClosed = true;
         stableCoin = _stableCoin;
         _uri = _baseUri;
         maxQuantityMintable = 3;
@@ -247,7 +247,7 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
     }
 
     /**
-     * @notice Transfers initial token quantities to the contract and enables minting
+     * @notice Transfers initial token quantities to the contract and enables mint
      * @dev Can only be called once by admin. Requires admin to have approved sufficient token amounts
      */
     function fillBottles() external onlyRole(DEFAULT_ADMIN_ROLE) {
@@ -268,7 +268,6 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
         }
 
         bottlesFilled = true;
-        mintingClosed = false; // Open mint
     }
 
     /**
@@ -280,8 +279,8 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
      */
     function mint(address _to, uint32 _quantity, uint256 _categoryId) external nonReentrant {
         if (_categoryId >= categories.length) revert InvalidCategory();
-        if (mintingClosed) {
-            revert MintingClosed();
+        if (mintClosed) {
+            revert MintClosed();
         }
 
         if (_quantity == 0) {
@@ -354,21 +353,21 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
     }
 
     /**
-     * @dev Close or Open the minting of the NFTs
+     * @dev Close or Open the mint of the NFTs
      */
-    function changeMintingStatus() external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function changeMintStatus() external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (_allTokensWithdrawn) {
             revert AllTokensWithdrawn();
         }
-        mintingClosed = !mintingClosed;
+        mintClosed = !mintClosed;
     }
 
     /**
      *
-     * @dev Whithdraw all tokens in the contract for non minted bottles only - require that minting is closed
+     * @dev Whithdraw all tokens in the contract for non minted bottles only - requires a closed mint
      */
     function withdrawAllTokens() external nonReentrant onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (!mintingClosed) revert MintingNotClosed();
+        if (!mintClosed) revert MintNotClosed();
         if (_allTokensWithdrawn) revert AllTokensWithdrawn();
 
         uint256 categoriesLength = categories.length;
@@ -403,7 +402,7 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
      * @param _receiver The royalty fee
      * @param _feeNumerator The royalty fee
      */
-    function setDefaultRoyalty(address _receiver, uint96 _feeNumerator) external onlyRole(SYSTEM_WALLET_ROLE) {
+    function setDefaultRoyalty(address _receiver, uint96 _feeNumerator) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _setDefaultRoyalty(_receiver, _feeNumerator);
     }
 
