@@ -54,7 +54,7 @@ contract CryptoCuveeV3 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
     /**
      * @dev Base URI for computing {tokenURI}
      */
-    string private baseURI;
+    string private _uri;
 
     /**
      * @dev The user share of the tokens
@@ -100,12 +100,12 @@ contract CryptoCuveeV3 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
     /**
      * @dev Mint status
      */
-    bool private mintingClosed;
+    bool public mintingClosed;
 
     /**
      * @dev All tokens withdrawn
      */
-    bool private allTokensWithdrawn;
+    bool private _allTokensWithdrawn;
 
     /**
      * @dev Max quantity mintable per transaction
@@ -125,17 +125,17 @@ contract CryptoCuveeV3 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
     /**
      * @dev Mapping of all unique token addresses
      */
-    address[] private uniqueERC20TokenAddresses;
+    address[] private _uniqueERC20TokenAddresses;
 
     /**
      * @dev Mapping to check if a token address already exists in uniqueTokenAddresses
      */
-    mapping(address => bool) private tokenAddressExists;
+    mapping(address => bool) private _tokenAddressExists;
 
     /**
      * @dev Total quantity for a given token mapping
      */
-    mapping(address => uint256) private totalTokenQuantity;
+    mapping(address => uint256) public totalTokenQuantity;
 
     /**
      * @dev Mapping of all opened bottles
@@ -150,7 +150,7 @@ contract CryptoCuveeV3 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
     /**
      * @dev Withdraw amount for each token
      */
-    mapping(address => uint256) private withdrawAmountsERC20;
+    mapping(address => uint256) private _withdrawAmountsERC20;
 
     /**
      * @dev CryptoBottle's minted event
@@ -170,7 +170,7 @@ contract CryptoCuveeV3 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
     /**
      * @dev Track if bottles have been filled
      */
-    bool private bottlesFilled;
+    bool public bottlesFilled;
 
     /**
      * @dev NFT Box Collection address that receives 10% of opened bottle tokens
@@ -209,7 +209,7 @@ contract CryptoCuveeV3 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
         _nextTokenId = 1;
         mintingClosed = true;
         stableCoin = _stableCoin;
-        baseURI = _baseUri;
+        _uri = _baseUri;
         maxQuantityMintable = 3;
 
         // Initialize Categories
@@ -233,9 +233,9 @@ contract CryptoCuveeV3 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
                     Token({name: memToken.name, tokenAddress: memToken.tokenAddress, quantity: memToken.quantity})
                 );
 
-                if (!tokenAddressExists[memToken.tokenAddress]) {
-                    uniqueERC20TokenAddresses.push(memToken.tokenAddress);
-                    tokenAddressExists[memToken.tokenAddress] = true;
+                if (!_tokenAddressExists[memToken.tokenAddress]) {
+                    _uniqueERC20TokenAddresses.push(memToken.tokenAddress);
+                    _tokenAddressExists[memToken.tokenAddress] = true;
                     totalTokenQuantity[memToken.tokenAddress] = 0;
                 }
                 totalTokenQuantity[memToken.tokenAddress] += memToken.quantity * _totalBottles[i];
@@ -255,8 +255,8 @@ contract CryptoCuveeV3 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
             revert BottlesAlreadyFilled();
         }
 
-        for (uint256 i = 0; i < uniqueERC20TokenAddresses.length; i++) {
-            address tokenAddress = uniqueERC20TokenAddresses[i];
+        for (uint256 i = 0; i < _uniqueERC20TokenAddresses.length; i++) {
+            address tokenAddress = _uniqueERC20TokenAddresses[i];
             uint256 tokenBalance = IERC20(tokenAddress).balanceOf(_msgSender());
             if (tokenBalance < totalTokenQuantity[tokenAddress]) {
                 revert InsufficientTokenBalance(tokenAddress, tokenBalance);
@@ -357,7 +357,7 @@ contract CryptoCuveeV3 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
      * @dev Close or Open the minting of the NFTs
      */
     function changeMintingStatus() external onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (allTokensWithdrawn) {
+        if (_allTokensWithdrawn) {
             revert AllTokensWithdrawn();
         }
         mintingClosed = !mintingClosed;
@@ -369,7 +369,7 @@ contract CryptoCuveeV3 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
      */
     function withdrawAllTokens() external nonReentrant onlyRole(DEFAULT_ADMIN_ROLE) {
         if (!mintingClosed) revert MintingNotClosed();
-        if (allTokensWithdrawn) revert AllTokensWithdrawn();
+        if (_allTokensWithdrawn) revert AllTokensWithdrawn();
 
         uint256 categoriesLength = categories.length;
 
@@ -380,22 +380,22 @@ contract CryptoCuveeV3 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
 
             for (uint256 j; j < tokensLength;) {
                 Token memory token = category.tokens[j];
-                withdrawAmountsERC20[token.tokenAddress] += token.quantity * unclaimedBottles;
+                _withdrawAmountsERC20[token.tokenAddress] += token.quantity * unclaimedBottles;
                 ++j;
             }
             ++categoryId;
         }
 
         // Transfer all remaining tokens
-        for (uint256 i = 0; i < uniqueERC20TokenAddresses.length; i++) {
-            address tokenAddress = uniqueERC20TokenAddresses[i];
-            uint256 amount = withdrawAmountsERC20[tokenAddress];
+        for (uint256 i = 0; i < _uniqueERC20TokenAddresses.length; i++) {
+            address tokenAddress = _uniqueERC20TokenAddresses[i];
+            uint256 amount = _withdrawAmountsERC20[tokenAddress];
             if (amount > 0) {
                 SafeERC20.safeTransfer(IERC20(tokenAddress), _msgSender(), amount);
             }
         }
 
-        allTokensWithdrawn = true;
+        _allTokensWithdrawn = true;
     }
 
     /**
@@ -416,6 +416,14 @@ contract CryptoCuveeV3 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
         address oldAddress = nftBoxCollectionAddress;
         nftBoxCollectionAddress = _newAddress;
         emit NFTBoxCollectionAddressUpdated(oldAddress, _newAddress);
+    }
+
+    /**
+     * @dev Sets the base URI for token metadata
+     * @param uri_ New base URI
+     */
+    function setBaseURI(string memory uri_) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _uri = uri_;
     }
 
     /**
@@ -495,11 +503,8 @@ contract CryptoCuveeV3 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
         super._increaseBalance(account, value);
     }
 
-    /**
-     * @dev Base URI for computing {tokenURI}. If set, the resulting URI for each
-     * token will be the concatenation of the `baseURI` and the `tokenId`.
-     */
-    function _baseURI() internal view override(ERC721) returns (string memory) {
-        return baseURI;
+    /// @notice Returns the base URI for token metadata
+    function _baseURI() internal view override returns (string memory) {
+        return _uri;
     }
 }

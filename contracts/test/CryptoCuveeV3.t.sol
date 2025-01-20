@@ -404,4 +404,39 @@ contract CryptoCuveeV3Test is Test {
         cryptoCuveeV3.setDefaultRoyalty(user1, 10);
         vm.stopPrank();
     }
+
+    /// @notice Tests setting and retrieving updated base URI
+    function testSetBaseURI() public {
+        // Initial URI check
+        vm.startPrank(user1);
+        mockStableCoin.mint(user1, 100 ether);
+        mockStableCoin.approve(address(cryptoCuveeV3), 100 ether);
+        cryptoCuveeV3.mint(user1, 1, 0);
+        string memory initialUri = cryptoCuveeV3.tokenURI(1);
+        assertTrue(keccak256(abi.encodePacked(initialUri)) == keccak256(abi.encodePacked("https://test.com/1")));
+        vm.stopPrank();
+
+        // Update URI
+        vm.startPrank(deployer);
+        cryptoCuveeV3.setBaseURI("https://test2.com/");
+        vm.stopPrank();
+
+        // Verify updated URI
+        string memory newUri = cryptoCuveeV3.tokenURI(1);
+        assertTrue(keccak256(abi.encodePacked(newUri)) == keccak256(abi.encodePacked("https://test2.com/1")));
+    }
+
+    /// @notice Ensures unauthorized accounts cannot set base URI
+    function testRevertSetBaseURIUnauthorized() public {
+        vm.startPrank(user1);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                address(user1),
+                cryptoCuveeV3.DEFAULT_ADMIN_ROLE()
+            )
+        );
+        cryptoCuveeV3.setBaseURI("https://test2.com/");
+        vm.stopPrank();
+    }
 }
