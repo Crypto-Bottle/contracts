@@ -2,12 +2,12 @@
 pragma solidity ^0.8.28;
 
 import {Test} from "forge-std/Test.sol";
-import {CryptoCuveeV3} from "../src/CryptoCuveeV3.sol";
+import {CryptoCuveeV2} from "../src/CryptoCuveeV2.sol";
 import {MockERC20} from "../src/mocks/MockERC20.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
-contract CryptoCuveeV3Test is Test {
-    CryptoCuveeV3 cryptoCuveeV3;
+contract CryptoCuveeV2Test is Test {
+    CryptoCuveeV2 cryptoCuveeV2;
     MockERC20 mockStableCoin;
     MockERC20 mockBTC;
     MockERC20 mockETH;
@@ -23,7 +23,7 @@ contract CryptoCuveeV3Test is Test {
     uint256 constant CHAMPAGNE_BTC_QUANTITY = 4 ether;
     uint256 constant CHAMPAGNE_ETH_QUANTITY = 6 ether;
 
-    CryptoCuveeV3.Token[] tokens;
+    CryptoCuveeV2.Token[] tokens;
 
     function setUp() public {
         deployer = address(this);
@@ -55,96 +55,96 @@ contract CryptoCuveeV3Test is Test {
         totalBottles[3] = 1; // Champagne total bottles
 
         // Prepare tokens for each category
-        CryptoCuveeV3.Token[][] memory categoryTokens = new CryptoCuveeV3.Token[][](4);
+        CryptoCuveeV2.Token[][] memory categoryTokens = new CryptoCuveeV2.Token[][](4);
 
         // Rouge category tokens
-        categoryTokens[0] = new CryptoCuveeV3.Token[](2);
+        categoryTokens[0] = new CryptoCuveeV2.Token[](2);
         categoryTokens[0][0] =
-            CryptoCuveeV3.Token({name: "mBTC", tokenAddress: address(mockBTC), quantity: ROUGE_BTC_QUANTITY});
+            CryptoCuveeV2.Token({name: "mBTC", tokenAddress: address(mockBTC), quantity: ROUGE_BTC_QUANTITY});
         categoryTokens[0][1] =
-            CryptoCuveeV3.Token({name: "mETH", tokenAddress: address(mockETH), quantity: ROUGE_ETH_QUANTITY});
+            CryptoCuveeV2.Token({name: "mETH", tokenAddress: address(mockETH), quantity: ROUGE_ETH_QUANTITY});
 
         // Blanc category tokens
-        categoryTokens[1] = new CryptoCuveeV3.Token[](0);
+        categoryTokens[1] = new CryptoCuveeV2.Token[](0);
 
         // Rosé category tokens
-        categoryTokens[2] = new CryptoCuveeV3.Token[](0);
+        categoryTokens[2] = new CryptoCuveeV2.Token[](0);
 
         // Champagne category tokens
-        categoryTokens[3] = new CryptoCuveeV3.Token[](2);
+        categoryTokens[3] = new CryptoCuveeV2.Token[](2);
         categoryTokens[3][0] =
-            CryptoCuveeV3.Token({name: "mBTC", tokenAddress: address(mockBTC), quantity: CHAMPAGNE_BTC_QUANTITY});
+            CryptoCuveeV2.Token({name: "mBTC", tokenAddress: address(mockBTC), quantity: CHAMPAGNE_BTC_QUANTITY});
         categoryTokens[3][1] =
-            CryptoCuveeV3.Token({name: "mETH", tokenAddress: address(mockETH), quantity: CHAMPAGNE_ETH_QUANTITY});
+            CryptoCuveeV2.Token({name: "mETH", tokenAddress: address(mockETH), quantity: CHAMPAGNE_ETH_QUANTITY});
 
-        // Deploy CryptoCuveeV3
-        cryptoCuveeV3 = new CryptoCuveeV3(
+        // Deploy CryptoCuveeV2
+        cryptoCuveeV2 = new CryptoCuveeV2(
             mockStableCoin, prices, totalBottles, categoryTokens, "https://test.com/", systemWallet, address(deployer)
         );
 
         // Approve mock tokens after deployment
-        mockBTC.approve(address(cryptoCuveeV3), 100 ether);
-        mockETH.approve(address(cryptoCuveeV3), 100 ether);
+        mockBTC.approve(address(cryptoCuveeV2), 100 ether);
+        mockETH.approve(address(cryptoCuveeV2), 100 ether);
 
         // Fill bottles
-        cryptoCuveeV3.fillBottles();
+        cryptoCuveeV2.fillBottles();
     }
 
     /// @notice Verifies system wallet role was correctly assigned during initialization
     function testContractInit() public view {
-        assertTrue(cryptoCuveeV3.hasRole(cryptoCuveeV3.SYSTEM_WALLET_ROLE(), address(systemWallet)));
+        assertTrue(cryptoCuveeV2.hasRole(cryptoCuveeV2.SYSTEM_WALLET_ROLE(), address(systemWallet)));
     }
 
     /// @notice Ensures bottles cannot be filled twice
     function testRevertFillBottles() public {
-        vm.expectRevert(abi.encodeWithSelector(CryptoCuveeV3.BottlesAlreadyFilled.selector));
-        cryptoCuveeV3.fillBottles();
+        vm.expectRevert(abi.encodeWithSelector(CryptoCuveeV2.BottlesAlreadyFilled.selector));
+        cryptoCuveeV2.fillBottles();
     }
 
     /// @notice Tests minting Rouge bottle by system wallet
     function testMintCryptoBottleSystemWallet() public {
         vm.startPrank(systemWallet);
-        cryptoCuveeV3.mint(user1, 1, 0); // Category 0 (Rouge)
+        cryptoCuveeV2.mint(user1, 1, 0); // Category 0 (Rouge)
         vm.stopPrank();
     }
 
     /// @notice Tests minting Champagne bottle by system wallet
     function testMintCryptoBottleChampagneSystemWallet() public {
         vm.startPrank(systemWallet);
-        cryptoCuveeV3.mint(user1, 1, 3); // Category 3 (Champagne)
+        cryptoCuveeV2.mint(user1, 1, 3); // Category 3 (Champagne)
         vm.stopPrank();
     }
 
     /// @notice Verifies that minting more bottles than allowed in a category fails
     function testRevertMintCryptoBottleSystemWalletFullMinted() public {
         vm.startPrank(systemWallet);
-        vm.expectRevert(abi.encodeWithSelector(CryptoCuveeV3.CategoryFullyMinted.selector));
-        cryptoCuveeV3.mint(user1, 2, 0); // Try to mint 2 Rouge bottles
+        vm.expectRevert(abi.encodeWithSelector(CryptoCuveeV2.CategoryFullyMinted.selector));
+        cryptoCuveeV2.mint(user1, 2, 0); // Try to mint 2 Rouge bottles
         vm.stopPrank();
     }
 
     /// @notice Tests setting the maximum quantity that can be minted
     function testSetMaxQuantityMintable() public {
         vm.startPrank(deployer);
-        cryptoCuveeV3.setMaxQuantityMintable(5);
+        cryptoCuveeV2.setMaxQuantityMintable(5);
         vm.stopPrank();
     }
 
     /// @notice Verifies total supply increases correctly after minting multiple bottles
     function testMintTwiceAndCheckTotalSupply() public {
         vm.startPrank(systemWallet);
-        cryptoCuveeV3.mint(user1, 1, 0); // Rouge
-        cryptoCuveeV3.mint(user2, 1, 3); // Champagne
-        assertEq(cryptoCuveeV3.totalSupply(), 2);
+        cryptoCuveeV2.mint(user1, 1, 0); // Rouge
+        cryptoCuveeV2.mint(user2, 1, 3); // Champagne
+        assertEq(cryptoCuveeV2.totalSupply(), 2);
         vm.stopPrank();
     }
 
     /// @notice Ensures simultaneous minting of a fully minted category reverts
     function testRevertMintSimultaneouslySystemWallet() public {
         vm.startPrank(systemWallet);
-        cryptoCuveeV3.mint(user1, 1, 0); // Rouge
-        vm.expectRevert(abi.encodeWithSelector(CryptoCuveeV3.CategoryFullyMinted.selector));
-        cryptoCuveeV3.mint(user2, 1, 0); // Try to mint another Rouge
+        cryptoCuveeV2.mint(user1, 1, 0); // Rouge
+        vm.expectRevert(abi.encodeWithSelector(CryptoCuveeV2.CategoryFullyMinted.selector));
+        cryptoCuveeV2.mint(user2, 1, 0); // Try to mint another Rouge
         vm.stopPrank();
     }
 
@@ -152,8 +152,8 @@ contract CryptoCuveeV3Test is Test {
     function testMintCryptoBottleUser1() public {
         vm.startPrank(user1);
         mockStableCoin.mint(user1, 100 ether);
-        mockStableCoin.approve(address(cryptoCuveeV3), 100 ether);
-        cryptoCuveeV3.mint(user1, 1, 0); // Rouge
+        mockStableCoin.approve(address(cryptoCuveeV2), 100 ether);
+        cryptoCuveeV2.mint(user1, 1, 0); // Rouge
         assertEq(mockStableCoin.balanceOf(user1), 100 ether - 10 ether);
         vm.stopPrank();
     }
@@ -162,9 +162,9 @@ contract CryptoCuveeV3Test is Test {
     function testOpenBottle() public {
         vm.startPrank(user1);
         mockStableCoin.mint(user1, 100 ether);
-        mockStableCoin.approve(address(cryptoCuveeV3), 100 ether);
-        cryptoCuveeV3.mint(user1, 1, 0);
-        cryptoCuveeV3.openBottle(1);
+        mockStableCoin.approve(address(cryptoCuveeV2), 100 ether);
+        cryptoCuveeV2.mint(user1, 1, 0);
+        cryptoCuveeV2.openBottle(1);
         vm.stopPrank();
     }
 
@@ -173,9 +173,9 @@ contract CryptoCuveeV3Test is Test {
         // Setup: Mint 2 bottles to user1
         vm.startPrank(user1);
         mockStableCoin.mint(user1, 100 ether);
-        mockStableCoin.approve(address(cryptoCuveeV3), 100 ether);
-        cryptoCuveeV3.mint(user1, 1, 0); // Mint Rouge (tokenId 1)
-        cryptoCuveeV3.mint(user1, 1, 3); // Mint Champagne (tokenId 2)
+        mockStableCoin.approve(address(cryptoCuveeV2), 100 ether);
+        cryptoCuveeV2.mint(user1, 1, 0); // Mint Rouge (tokenId 1)
+        cryptoCuveeV2.mint(user1, 1, 3); // Mint Champagne (tokenId 2)
 
         // Create array of token IDs to open
         uint256[] memory tokenIds = new uint256[](2);
@@ -187,11 +187,11 @@ contract CryptoCuveeV3Test is Test {
         uint256 initialETHBalance = mockETH.balanceOf(user1);
 
         // Open both bottles
-        cryptoCuveeV3.openBottles(tokenIds);
+        cryptoCuveeV2.openBottles(tokenIds);
 
         // Verify both bottles are marked as opened
-        assertTrue(cryptoCuveeV3.openedBottles(1));
-        assertTrue(cryptoCuveeV3.openedBottles(2));
+        assertTrue(cryptoCuveeV2.openedBottles(1));
+        assertTrue(cryptoCuveeV2.openedBottles(2));
 
         // Calculate expected token amounts (90% of total)
         // Rouge: ROUGE_BTC_QUANTITY + ROUGE_ETH_QUANTITY
@@ -209,13 +209,13 @@ contract CryptoCuveeV3Test is Test {
     function testRevertOpenBottleNotOwner() public {
         vm.startPrank(user1);
         mockStableCoin.mint(user1, 100 ether);
-        mockStableCoin.approve(address(cryptoCuveeV3), 100 ether);
-        cryptoCuveeV3.mint(user1, 1, 0);
+        mockStableCoin.approve(address(cryptoCuveeV2), 100 ether);
+        cryptoCuveeV2.mint(user1, 1, 0);
         vm.stopPrank();
 
         vm.startPrank(user2);
-        vm.expectRevert(abi.encodeWithSelector(CryptoCuveeV3.NotOwnerBottle.selector, 1));
-        cryptoCuveeV3.openBottle(1);
+        vm.expectRevert(abi.encodeWithSelector(CryptoCuveeV2.NotOwnerBottle.selector, 1));
+        cryptoCuveeV2.openBottle(1);
         vm.stopPrank();
     }
 
@@ -223,11 +223,11 @@ contract CryptoCuveeV3Test is Test {
     function testRevertOpenBottleTwice() public {
         vm.startPrank(user1);
         mockStableCoin.mint(user1, 100 ether);
-        mockStableCoin.approve(address(cryptoCuveeV3), 100 ether);
-        cryptoCuveeV3.mint(user1, 1, 0);
-        cryptoCuveeV3.openBottle(1);
-        vm.expectRevert(abi.encodeWithSelector(CryptoCuveeV3.BottleAlreadyOpened.selector, 1));
-        cryptoCuveeV3.openBottle(1);
+        mockStableCoin.approve(address(cryptoCuveeV2), 100 ether);
+        cryptoCuveeV2.mint(user1, 1, 0);
+        cryptoCuveeV2.openBottle(1);
+        vm.expectRevert(abi.encodeWithSelector(CryptoCuveeV2.BottleAlreadyOpened.selector, 1));
+        cryptoCuveeV2.openBottle(1);
         vm.stopPrank();
     }
 
@@ -235,12 +235,12 @@ contract CryptoCuveeV3Test is Test {
     function testMintAndWithdraw() public {
         vm.startPrank(user1);
         mockStableCoin.mint(user1, 100 ether);
-        mockStableCoin.approve(address(cryptoCuveeV3), 100 ether);
-        cryptoCuveeV3.mint(user1, 1, 0);
+        mockStableCoin.approve(address(cryptoCuveeV2), 100 ether);
+        cryptoCuveeV2.mint(user1, 1, 0);
         vm.stopPrank();
 
         vm.startPrank(deployer);
-        cryptoCuveeV3.withdrawStableCoin();
+        cryptoCuveeV2.withdrawStableCoin();
         vm.stopPrank();
     }
 
@@ -248,24 +248,24 @@ contract CryptoCuveeV3Test is Test {
     function testWithdrawAllTokens() public {
         vm.startPrank(user1);
         mockStableCoin.mint(user1, 100 ether);
-        mockStableCoin.approve(address(cryptoCuveeV3), 100 ether);
-        cryptoCuveeV3.mint(user1, 1, 0);
-        cryptoCuveeV3.mint(user1, 1, 3);
-        cryptoCuveeV3.openBottle(1);
+        mockStableCoin.approve(address(cryptoCuveeV2), 100 ether);
+        cryptoCuveeV2.mint(user1, 1, 0);
+        cryptoCuveeV2.mint(user1, 1, 3);
+        cryptoCuveeV2.openBottle(1);
         vm.stopPrank();
 
         vm.startPrank(deployer);
-        cryptoCuveeV3.changeMintingStatus();
-        cryptoCuveeV3.withdrawAllTokens();
-        vm.expectRevert(abi.encodeWithSelector(CryptoCuveeV3.AllTokensWithdrawn.selector));
-        cryptoCuveeV3.changeMintingStatus();
-        vm.expectRevert(abi.encodeWithSelector(CryptoCuveeV3.AllTokensWithdrawn.selector));
-        cryptoCuveeV3.withdrawAllTokens();
+        cryptoCuveeV2.changeMintingStatus();
+        cryptoCuveeV2.withdrawAllTokens();
+        vm.expectRevert(abi.encodeWithSelector(CryptoCuveeV2.AllTokensWithdrawn.selector));
+        cryptoCuveeV2.changeMintingStatus();
+        vm.expectRevert(abi.encodeWithSelector(CryptoCuveeV2.AllTokensWithdrawn.selector));
+        cryptoCuveeV2.withdrawAllTokens();
 
         // Check if the tokens are withdrawn - mockBTC balance must be CHAMPAGNE_BTC_QUANTITY because only the first bottle is opened
-        assertEq(mockBTC.balanceOf(address(cryptoCuveeV3)), CHAMPAGNE_BTC_QUANTITY);
+        assertEq(mockBTC.balanceOf(address(cryptoCuveeV2)), CHAMPAGNE_BTC_QUANTITY);
         // Check if the tokens are withdrawn - mockETH balance must be CHAMPAGNE_ETH_QUANTITY because only the first bottle is opened
-        assertEq(mockETH.balanceOf(address(cryptoCuveeV3)), CHAMPAGNE_ETH_QUANTITY);
+        assertEq(mockETH.balanceOf(address(cryptoCuveeV2)), CHAMPAGNE_ETH_QUANTITY);
         vm.stopPrank();
     }
 
@@ -273,14 +273,14 @@ contract CryptoCuveeV3Test is Test {
     function testRevertWithdrawAllTokensMintingNotClosed() public {
         vm.startPrank(user1);
         mockStableCoin.mint(user1, 100 ether);
-        mockStableCoin.approve(address(cryptoCuveeV3), 100 ether);
-        cryptoCuveeV3.mint(user1, 1, 0);
-        cryptoCuveeV3.openBottle(1);
+        mockStableCoin.approve(address(cryptoCuveeV2), 100 ether);
+        cryptoCuveeV2.mint(user1, 1, 0);
+        cryptoCuveeV2.openBottle(1);
         vm.stopPrank();
 
         vm.startPrank(deployer);
-        vm.expectRevert(abi.encodeWithSelector(CryptoCuveeV3.MintingNotClosed.selector));
-        cryptoCuveeV3.withdrawAllTokens();
+        vm.expectRevert(abi.encodeWithSelector(CryptoCuveeV2.MintingNotClosed.selector));
+        cryptoCuveeV2.withdrawAllTokens();
         vm.stopPrank();
     }
 
@@ -288,9 +288,9 @@ contract CryptoCuveeV3Test is Test {
     function testMintAndRetrieveTokens() public {
         vm.startPrank(user1);
         mockStableCoin.mint(user1, 100 ether);
-        mockStableCoin.approve(address(cryptoCuveeV3), 100 ether);
-        cryptoCuveeV3.mint(user1, 1, 0);
-        tokens = cryptoCuveeV3.getCryptoBottleTokens(1);
+        mockStableCoin.approve(address(cryptoCuveeV2), 100 ether);
+        cryptoCuveeV2.mint(user1, 1, 0);
+        tokens = cryptoCuveeV2.getCryptoBottleTokens(1);
 
         assertEq(tokens.length, 2);
         assertEq(tokens[0].name, "mBTC");
@@ -307,9 +307,9 @@ contract CryptoCuveeV3Test is Test {
     function testRevertMintZeroQuantity() public {
         vm.startPrank(user1);
         mockStableCoin.mint(user1, 100 ether);
-        mockStableCoin.approve(address(cryptoCuveeV3), 100 ether);
-        vm.expectRevert(abi.encodeWithSelector(CryptoCuveeV3.QuantityMustBeGreaterThanZero.selector));
-        cryptoCuveeV3.mint(user1, 0, 0);
+        mockStableCoin.approve(address(cryptoCuveeV2), 100 ether);
+        vm.expectRevert(abi.encodeWithSelector(CryptoCuveeV2.QuantityMustBeGreaterThanZero.selector));
+        cryptoCuveeV2.mint(user1, 0, 0);
         vm.stopPrank();
     }
 
@@ -318,10 +318,10 @@ contract CryptoCuveeV3Test is Test {
         vm.startPrank(user1);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector, user1, cryptoCuveeV3.DEFAULT_ADMIN_ROLE()
+                IAccessControl.AccessControlUnauthorizedAccount.selector, user1, cryptoCuveeV2.DEFAULT_ADMIN_ROLE()
             )
         );
-        cryptoCuveeV3.withdrawStableCoin();
+        cryptoCuveeV2.withdrawStableCoin();
         vm.stopPrank();
     }
 
@@ -330,22 +330,22 @@ contract CryptoCuveeV3Test is Test {
         vm.startPrank(user1);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector, user1, cryptoCuveeV3.DEFAULT_ADMIN_ROLE()
+                IAccessControl.AccessControlUnauthorizedAccount.selector, user1, cryptoCuveeV2.DEFAULT_ADMIN_ROLE()
             )
         );
-        cryptoCuveeV3.changeMintingStatus();
+        cryptoCuveeV2.changeMintingStatus();
         vm.stopPrank();
     }
 
     /// @notice Tests successful minting status change and subsequent mint rejection
     function testChangeMintingStatusSuccessfully() public {
         vm.startPrank(deployer);
-        cryptoCuveeV3.changeMintingStatus();
+        cryptoCuveeV2.changeMintingStatus();
         vm.stopPrank();
 
         vm.startPrank(user1);
-        vm.expectRevert(abi.encodeWithSelector(CryptoCuveeV3.MintingClosed.selector));
-        cryptoCuveeV3.mint(user1, 1, 0);
+        vm.expectRevert(abi.encodeWithSelector(CryptoCuveeV2.MintingClosed.selector));
+        cryptoCuveeV2.mint(user1, 1, 0);
         vm.stopPrank();
     }
 
@@ -353,9 +353,9 @@ contract CryptoCuveeV3Test is Test {
     function testTokenURI() public {
         vm.startPrank(user1);
         mockStableCoin.mint(user1, 100 ether);
-        mockStableCoin.approve(address(cryptoCuveeV3), 100 ether);
-        cryptoCuveeV3.mint(user1, 1, 0);
-        string memory uri = cryptoCuveeV3.tokenURI(1);
+        mockStableCoin.approve(address(cryptoCuveeV2), 100 ether);
+        cryptoCuveeV2.mint(user1, 1, 0);
+        string memory uri = cryptoCuveeV2.tokenURI(1);
         assertTrue(keccak256(abi.encodePacked(uri)) == keccak256(abi.encodePacked("https://test.com/1")));
         vm.stopPrank();
     }
@@ -363,31 +363,31 @@ contract CryptoCuveeV3Test is Test {
     /// @notice Verifies that minting fails when category is fully minted
     function testRevertCategoryFullyMinted() public {
         vm.startPrank(systemWallet);
-        cryptoCuveeV3.mint(user1, 1, 0);
-        assertTrue(cryptoCuveeV3.totalSupply() == 1);
-        vm.expectRevert(CryptoCuveeV3.CategoryFullyMinted.selector);
-        cryptoCuveeV3.mint(user1, 1, 0);
+        cryptoCuveeV2.mint(user1, 1, 0);
+        assertTrue(cryptoCuveeV2.totalSupply() == 1);
+        vm.expectRevert(CryptoCuveeV2.CategoryFullyMinted.selector);
+        cryptoCuveeV2.mint(user1, 1, 0);
         vm.stopPrank();
     }
 
     /// @notice Ensures minting fails when attempting to exceed max quantity
     function testRevertMaxQuantityReach() public {
         vm.startPrank(systemWallet);
-        vm.expectRevert(CryptoCuveeV3.MaxQuantityReached.selector);
-        cryptoCuveeV3.mint(user1, 4, 0);
+        vm.expectRevert(CryptoCuveeV2.MaxQuantityReached.selector);
+        cryptoCuveeV2.mint(user1, 4, 0);
         vm.stopPrank();
     }
 
     /// @notice Tests ERC165 interface support
     function testSupportsInterface() public view {
-        bool isSupported = cryptoCuveeV3.supportsInterface(0x01ffc9a7);
+        bool isSupported = cryptoCuveeV2.supportsInterface(0x01ffc9a7);
         assertTrue(isSupported);
     }
 
     /// @notice Tests setting default royalty by system wallet
     function testSetDefaultRoyalty() public {
         vm.startPrank(systemWallet);
-        cryptoCuveeV3.setDefaultRoyalty(user1, 10);
+        cryptoCuveeV2.setDefaultRoyalty(user1, 10);
         vm.stopPrank();
     }
 
@@ -398,10 +398,10 @@ contract CryptoCuveeV3Test is Test {
             abi.encodeWithSelector(
                 IAccessControl.AccessControlUnauthorizedAccount.selector,
                 address(user1),
-                cryptoCuveeV3.SYSTEM_WALLET_ROLE()
+                cryptoCuveeV2.SYSTEM_WALLET_ROLE()
             )
         );
-        cryptoCuveeV3.setDefaultRoyalty(user1, 10);
+        cryptoCuveeV2.setDefaultRoyalty(user1, 10);
         vm.stopPrank();
     }
 
@@ -410,19 +410,19 @@ contract CryptoCuveeV3Test is Test {
         // Initial URI check
         vm.startPrank(user1);
         mockStableCoin.mint(user1, 100 ether);
-        mockStableCoin.approve(address(cryptoCuveeV3), 100 ether);
-        cryptoCuveeV3.mint(user1, 1, 0);
-        string memory initialUri = cryptoCuveeV3.tokenURI(1);
+        mockStableCoin.approve(address(cryptoCuveeV2), 100 ether);
+        cryptoCuveeV2.mint(user1, 1, 0);
+        string memory initialUri = cryptoCuveeV2.tokenURI(1);
         assertTrue(keccak256(abi.encodePacked(initialUri)) == keccak256(abi.encodePacked("https://test.com/1")));
         vm.stopPrank();
 
         // Update URI
         vm.startPrank(deployer);
-        cryptoCuveeV3.setBaseURI("https://test2.com/");
+        cryptoCuveeV2.setBaseURI("https://test2.com/");
         vm.stopPrank();
 
         // Verify updated URI
-        string memory newUri = cryptoCuveeV3.tokenURI(1);
+        string memory newUri = cryptoCuveeV2.tokenURI(1);
         assertTrue(keccak256(abi.encodePacked(newUri)) == keccak256(abi.encodePacked("https://test2.com/1")));
     }
 
@@ -433,10 +433,10 @@ contract CryptoCuveeV3Test is Test {
             abi.encodeWithSelector(
                 IAccessControl.AccessControlUnauthorizedAccount.selector,
                 address(user1),
-                cryptoCuveeV3.DEFAULT_ADMIN_ROLE()
+                cryptoCuveeV2.DEFAULT_ADMIN_ROLE()
             )
         );
-        cryptoCuveeV3.setBaseURI("https://test2.com/");
+        cryptoCuveeV2.setBaseURI("https://test2.com/");
         vm.stopPrank();
     }
 }

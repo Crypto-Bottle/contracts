@@ -10,13 +10,13 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
- * @title CryptoCuveeV3
- * @author RpGmAx (full remake)
+ * @title CryptoCuveeV2
+ * @author RpGmAx (full remake based on original V1 SC created by Valentin Chmara)
  * @notice A contract for minting NFTs that vault ERC20 tokens, allowing users to "open" their bottles
  * to claim the underlying tokens. Features multiple categories of bottles with different token combinations.
  * @dev Implements ERC721 with Enumerable and Royalty extensions, plus access control and reentrancy protection
  */
-contract CryptoCuveeV3 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royalty, AccessControl {
+contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royalty, AccessControl {
     /**
      * @dev Custom error messages
      */
