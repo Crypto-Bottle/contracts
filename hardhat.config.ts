@@ -88,7 +88,7 @@ const config: HardhatUserConfig = {
     settings: {
       optimizer: {
         enabled: true,
-        runs: 999_999,
+        runs: 400,
       },
       viaIR: true,
       evmVersion: "paris", // Prevent using the `PUSH0` opcode
