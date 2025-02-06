@@ -317,6 +317,43 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
     }
 
     /**
+     * @notice Claims free bottles, only for admin and without worrying about the mint status
+     * @param _quantity Number of bottles to mint
+     * @param _categoryId Category index of bottles to mint
+     */
+    function claim(uint32 _quantity, uint256 _categoryId) external nonReentrant onlyRole(DEFAULT_ADMIN_ROLE) {
+        address _to = msg.sender;
+        if (_categoryId >= categories.length) revert InvalidCategory();
+
+        if (_quantity == 0) {
+            revert QuantityMustBeGreaterThanZero();
+        }
+
+        if (_quantity > maxQuantityMintable) {
+            revert MaxQuantityReached();
+        }
+
+        Category storage category = categories[_categoryId];
+        if (category.mintedBottles + _quantity > category.totalBottles) {
+            revert CategoryFullyMinted();
+        }
+
+        // Update state
+        uint256[] memory tokenIds = new uint256[](_quantity);
+        for (uint32 i = 0; i < _quantity; i++) {
+            tokenIds[i] = _nextTokenId++;
+            bottleToCategory[tokenIds[i]] = _categoryId;
+            category.mintedBottles++;
+        }
+
+        // Claim tokens
+        for (uint32 i = 0; i < _quantity; i++) {
+            _safeMint(_to, tokenIds[i]);
+            emit CryptoBottleMinted(_to, tokenIds[i], _categoryId);
+        }
+    }
+
+    /**
      * @notice Allows bottle owner to claim the underlying tokens
      * @dev Transfers 90% of tokens to owner and 10% to NFT Box Collection address
      * @param _tokenId ID of the bottle to open

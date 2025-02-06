@@ -26,7 +26,7 @@ contract CryptoCuveeV2Test is Test {
     CryptoCuveeV2.Token[] tokens;
 
     function setUp() public {
-        deployer = address(this);
+        deployer = makeAddr("deployer");
         systemWallet = makeAddr("systemWallet");
         user1 = makeAddr("user1");
         user2 = makeAddr("user2");
@@ -77,19 +77,26 @@ contract CryptoCuveeV2Test is Test {
         categoryTokens[3][1] =
             CryptoCuveeV2.Token({name: "mETH", tokenAddress: address(mockETH), quantity: CHAMPAGNE_ETH_QUANTITY});
 
-        // Deploy CryptoCuveeV2
+        // Deploy CryptoCuveeV2 as deployer
+        vm.startPrank(deployer);
         cryptoCuveeV2 = new CryptoCuveeV2(
-            mockStableCoin, prices, totalBottles, categoryTokens, "https://test.com/", systemWallet, address(deployer)
+            mockStableCoin,
+            prices,
+            totalBottles,
+            categoryTokens,
+            "https://test.com/",
+            systemWallet,
+            deployer // Make sure deployer is set as admin
         );
 
         // Approve mock tokens after deployment
         mockBTC.approve(address(cryptoCuveeV2), 100 ether);
         mockETH.approve(address(cryptoCuveeV2), 100 ether);
 
-        // Fill bottles
+        // Fill bottles and open minting
         cryptoCuveeV2.fillBottles();
-        // Open minting
         cryptoCuveeV2.changeMintStatus();
+        vm.stopPrank();
     }
 
     /// @notice Verifies system wallet role was correctly assigned during initialization
@@ -99,8 +106,10 @@ contract CryptoCuveeV2Test is Test {
 
     /// @notice Ensures bottles cannot be filled twice
     function testRevertFillBottles() public {
+        vm.startPrank(deployer);
         vm.expectRevert(abi.encodeWithSelector(CryptoCuveeV2.BottlesAlreadyFilled.selector));
         cryptoCuveeV2.fillBottles();
+        vm.stopPrank();
     }
 
     /// @notice Tests minting Rouge bottle by system wallet
@@ -315,6 +324,16 @@ contract CryptoCuveeV2Test is Test {
         vm.stopPrank();
     }
 
+    /// @notice Ensures minting with invalid category fails
+    function testRevertMintInvalidCategory() public {
+        vm.startPrank(user1);
+        mockStableCoin.mint(user1, 100 ether);
+        mockStableCoin.approve(address(cryptoCuveeV2), 100 ether);
+        vm.expectRevert(CryptoCuveeV2.InvalidCategory.selector);
+        cryptoCuveeV2.mint(user1, 1, 99); // Try to mint from non-existent category
+        vm.stopPrank();
+    }
+
     /// @notice Verifies that unauthorized accounts cannot withdraw stable coin
     function testRevertWithdrawStableCoinWithoutRole() public {
         vm.startPrank(user1);
@@ -439,6 +458,62 @@ contract CryptoCuveeV2Test is Test {
             )
         );
         cryptoCuveeV2.setBaseURI("https://test2.com/");
+        vm.stopPrank();
+    }
+
+    /// @notice Tests claiming bottles by admin (deployer)
+    function testClaimBottles() public {
+        vm.startPrank(deployer);
+        cryptoCuveeV2.claim(1, 0); // Claim 1 Rouge bottle
+
+        // Verify the bottle was minted to the admin
+        assertEq(cryptoCuveeV2.ownerOf(1), deployer);
+        assertEq(cryptoCuveeV2.totalSupply(), 1);
+        vm.stopPrank();
+    }
+
+    /// @notice Ensures non-admin cannot claim bottles
+    function testRevertClaimUnauthorized() public {
+        vm.startPrank(user1);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, user1, cryptoCuveeV2.DEFAULT_ADMIN_ROLE()
+            )
+        );
+        cryptoCuveeV2.claim(1, 0);
+        vm.stopPrank();
+    }
+
+    /// @notice Ensures claiming fails when attempting to exceed category limit
+    function testRevertClaimCategoryFullyMinted() public {
+        vm.startPrank(deployer);
+        cryptoCuveeV2.claim(1, 0); // Claim the only Rouge bottle
+        vm.expectRevert(CryptoCuveeV2.CategoryFullyMinted.selector);
+        cryptoCuveeV2.claim(1, 0); // Try to claim another Rouge bottle
+        vm.stopPrank();
+    }
+
+    /// @notice Ensures claiming fails when attempting to exceed max quantity
+    function testRevertClaimMaxQuantityReached() public {
+        vm.startPrank(deployer);
+        vm.expectRevert(CryptoCuveeV2.MaxQuantityReached.selector);
+        cryptoCuveeV2.claim(4, 0); // Try to claim 4 bottles (max is 3)
+        vm.stopPrank();
+    }
+
+    /// @notice Ensures claiming with zero quantity fails
+    function testRevertClaimZeroQuantity() public {
+        vm.startPrank(deployer);
+        vm.expectRevert(CryptoCuveeV2.QuantityMustBeGreaterThanZero.selector);
+        cryptoCuveeV2.claim(0, 0);
+        vm.stopPrank();
+    }
+
+    /// @notice Ensures claiming with invalid category fails
+    function testRevertClaimInvalidCategory() public {
+        vm.startPrank(deployer);
+        vm.expectRevert(CryptoCuveeV2.InvalidCategory.selector);
+        cryptoCuveeV2.claim(1, 99); // Try to claim from non-existent category
         vm.stopPrank();
     }
 }

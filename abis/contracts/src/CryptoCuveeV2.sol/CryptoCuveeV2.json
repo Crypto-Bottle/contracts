@@ -59,6 +59,7 @@
   "function bottlesFilled() view returns (bool)",
   "function categories(uint256) view returns (uint256, uint256, uint256)",
   "function changeMintStatus()",
+  "function claim(uint32,uint256)",
   "function fillBottles()",
   "function getApproved(uint256) view returns (address)",
   "function getCryptoBottleTokens(uint256) view returns (tuple(string,address,uint256)[])",
