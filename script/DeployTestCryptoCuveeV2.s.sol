@@ -13,8 +13,12 @@ contract DeployCryptoCuveeV2 is Script {
     uint256 constant CHAMPAGNE_ETH_QUANTITY = 6 ether;
 
     function run() public {
-        uint256 deployerPrivateKey = 0x0000000000000000000000000000000000000000000000000000000000000000; // Internal note: Set your private key here
+        // This is a trash deploy script, it's not used in the project, reason why private keys aren't in .env file.
+        // Deploy is done via dApp only!
+        uint256 deployerPrivateKey = 0x0000000000000000000000000000000000000000000000000000000000000000; // Internal note: Set admin private key here
+        uint256 domainWalletPrivateKey = 0x0000000000000000000000000000000000000000000000000000000000000000; // Internal note: Set domaine private key here
         address deployer = vm.addr(deployerPrivateKey);
+        address domainWallet = vm.addr(domainWalletPrivateKey);
 
         vm.startBroadcast(deployerPrivateKey);
 
@@ -69,6 +73,7 @@ contract DeployCryptoCuveeV2 is Script {
             categoryTokens,
             "https://api.cryptocuvee.com/metadata/",
             deployer,
+            domainWallet,
             deployer
         );
 

@@ -1,5 +1,5 @@
 [
-  "constructor(address,uint256[],uint256[],tuple(string,address,uint256)[][],string,address,address)",
+  "constructor(address,uint256[],uint256[],tuple(string,address,uint256)[][],string,address,address,address)",
   "error AccessControlBadConfirmation()",
   "error AccessControlUnauthorizedAccount(address,bytes32)",
   "error AddressEmptyCode(address)",
@@ -26,6 +26,7 @@
   "error InsufficientTokenBalance(address,uint256)",
   "error InvalidAdminAddress()",
   "error InvalidCategory()",
+  "error InvalidDomainWallet()",
   "error InvalidNFTBoxAddress()",
   "error InvalidPrice()",
   "error InvalidStableCoinAddress()",
@@ -52,6 +53,7 @@
   "event RoleRevoked(bytes32 indexed,address indexed,address indexed)",
   "event Transfer(address indexed,address indexed,uint256 indexed)",
   "function DEFAULT_ADMIN_ROLE() view returns (bytes32)",
+  "function DOMAIN_WALLET_ROLE() view returns (bytes32)",
   "function SYSTEM_WALLET_ROLE() view returns (bytes32)",
   "function approve(address,uint256)",
   "function balanceOf(address) view returns (uint256)",
