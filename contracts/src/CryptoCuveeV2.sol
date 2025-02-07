@@ -33,6 +33,7 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
     error InvalidCategory();
     error InvalidStableCoinAddress();
     error InvalidSystemWallet();
+    error InvalidDomainWallet();
     error InvalidAdminAddress();
     error ParametersLengthMismatch();
     error InvalidPrice();
@@ -96,6 +97,11 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
      * @dev System wallet role, can mint without stable coin payment
      */
     bytes32 public constant SYSTEM_WALLET_ROLE = keccak256("SYSTEM_WALLET_ROLE");
+
+    /**
+     * @dev Domain wallet role, can change mint status, withdraw tokens and claim bottles
+     */
+    bytes32 public constant DOMAIN_WALLET_ROLE = keccak256("DOMAIN_WALLET_ROLE");
 
     /**
      * @dev Mint status
@@ -185,7 +191,8 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
      * @param _categoryTokens Nested array of token configurations for each category
      * @param _baseUri Base URI for token metadata
      * @param systemWallet Address of system wallet
-     * @param admin Address to receive admin privileges
+     * @param domainWallet Address of domain wallet
+     * @param adminWallet Address of admin wallet
      */
     constructor(
         IERC20 _stableCoin,
@@ -194,17 +201,20 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
         Token[][] memory _categoryTokens,
         string memory _baseUri,
         address systemWallet,
-        address admin
+        address domainWallet,
+        address adminWallet
     ) ERC721("CryptoCuvee", "CCV") {
         if (address(_stableCoin) == address(0)) revert InvalidStableCoinAddress();
         if (systemWallet == address(0)) revert InvalidSystemWallet();
-        if (admin == address(0)) revert InvalidAdminAddress();
+        if (domainWallet == address(0)) revert InvalidDomainWallet();
+        if (adminWallet == address(0)) revert InvalidAdminAddress();
         if (_prices.length != _totalBottles.length || _prices.length != _categoryTokens.length) {
             revert ParametersLengthMismatch();
         }
 
-        _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(SYSTEM_WALLET_ROLE, systemWallet);
+        _grantRole(DOMAIN_WALLET_ROLE, domainWallet);
+        _grantRole(DEFAULT_ADMIN_ROLE, adminWallet);
 
         _nextTokenId = 1;
         mintClosed = true;
@@ -321,7 +331,7 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
      * @param _quantity Number of bottles to mint
      * @param _categoryId Category index of bottles to mint
      */
-    function claim(uint32 _quantity, uint256 _categoryId) external nonReentrant onlyRole(DEFAULT_ADMIN_ROLE) {
+    function claim(uint32 _quantity, uint256 _categoryId) external nonReentrant onlyRole(DOMAIN_WALLET_ROLE) {
         address _to = msg.sender;
         if (_categoryId >= categories.length) revert InvalidCategory();
 
@@ -391,8 +401,12 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
 
     /**
      * @dev Close or Open the mint of the NFTs
+     * @notice Can be called by either admin or domain wallet roles
      */
-    function changeMintStatus() external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function changeMintStatus() external {
+        if (!hasRole(DEFAULT_ADMIN_ROLE, _msgSender()) && !hasRole(DOMAIN_WALLET_ROLE, _msgSender())) {
+            revert AccessControlUnauthorizedAccount(_msgSender(), DEFAULT_ADMIN_ROLE);
+        }
         if (_allTokensWithdrawn) {
             revert AllTokensWithdrawn();
         }
@@ -403,7 +417,7 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
      *
      * @dev Whithdraw all tokens in the contract for non minted bottles only - requires a closed mint
      */
-    function withdrawAllTokens() external nonReentrant onlyRole(DEFAULT_ADMIN_ROLE) {
+    function withdrawAllTokens() external nonReentrant onlyRole(DOMAIN_WALLET_ROLE) {
         if (!mintClosed) revert MintNotClosed();
         if (_allTokensWithdrawn) revert AllTokensWithdrawn();
 

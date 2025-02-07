@@ -15,6 +15,7 @@ contract CryptoCuveeV2Test is Test {
 
     address deployer;
     address systemWallet;
+    address domainWallet;
     address user1;
     address user2;
 
@@ -28,6 +29,7 @@ contract CryptoCuveeV2Test is Test {
     function setUp() public {
         deployer = makeAddr("deployer");
         systemWallet = makeAddr("systemWallet");
+        domainWallet = makeAddr("domainWallet");
         user1 = makeAddr("user1");
         user2 = makeAddr("user2");
 
@@ -86,7 +88,8 @@ contract CryptoCuveeV2Test is Test {
             categoryTokens,
             "https://test.com/",
             systemWallet,
-            deployer // Make sure deployer is set as admin
+            domainWallet,
+            deployer
         );
 
         // Approve mock tokens after deployment
@@ -265,7 +268,7 @@ contract CryptoCuveeV2Test is Test {
         cryptoCuveeV2.openBottle(1);
         vm.stopPrank();
 
-        vm.startPrank(deployer);
+        vm.startPrank(domainWallet);
         cryptoCuveeV2.changeMintStatus();
         cryptoCuveeV2.withdrawAllTokens();
         vm.expectRevert(abi.encodeWithSelector(CryptoCuveeV2.AllTokensWithdrawn.selector));
@@ -289,7 +292,7 @@ contract CryptoCuveeV2Test is Test {
         cryptoCuveeV2.openBottle(1);
         vm.stopPrank();
 
-        vm.startPrank(deployer);
+        vm.startPrank(domainWallet);
         vm.expectRevert(abi.encodeWithSelector(CryptoCuveeV2.MintNotClosed.selector));
         cryptoCuveeV2.withdrawAllTokens();
         vm.stopPrank();
@@ -358,8 +361,16 @@ contract CryptoCuveeV2Test is Test {
         vm.stopPrank();
     }
 
-    /// @notice Tests successful minting status change and subsequent mint rejection
+    /// @notice Tests successful minting status changes and subsequent mint rejection
     function testChangeMintStatusSuccessfully() public {
+        vm.startPrank(deployer);
+        cryptoCuveeV2.changeMintStatus();
+        vm.stopPrank();
+
+        vm.startPrank(domainWallet);
+        cryptoCuveeV2.changeMintStatus();
+        vm.stopPrank();
+
         vm.startPrank(deployer);
         cryptoCuveeV2.changeMintStatus();
         vm.stopPrank();
@@ -461,13 +472,13 @@ contract CryptoCuveeV2Test is Test {
         vm.stopPrank();
     }
 
-    /// @notice Tests claiming bottles by admin (deployer)
+    /// @notice Tests claiming bottles by domain
     function testClaimBottles() public {
-        vm.startPrank(deployer);
+        vm.startPrank(domainWallet);
         cryptoCuveeV2.claim(1, 0); // Claim 1 Rouge bottle
 
         // Verify the bottle was minted to the admin
-        assertEq(cryptoCuveeV2.ownerOf(1), deployer);
+        assertEq(cryptoCuveeV2.ownerOf(1), domainWallet);
         assertEq(cryptoCuveeV2.totalSupply(), 1);
         vm.stopPrank();
     }
@@ -477,7 +488,7 @@ contract CryptoCuveeV2Test is Test {
         vm.startPrank(user1);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector, user1, cryptoCuveeV2.DEFAULT_ADMIN_ROLE()
+                IAccessControl.AccessControlUnauthorizedAccount.selector, user1, cryptoCuveeV2.DOMAIN_WALLET_ROLE()
             )
         );
         cryptoCuveeV2.claim(1, 0);
@@ -486,16 +497,17 @@ contract CryptoCuveeV2Test is Test {
 
     /// @notice Ensures claiming fails when attempting to exceed category limit
     function testRevertClaimCategoryFullyMinted() public {
-        vm.startPrank(deployer);
+        vm.startPrank(domainWallet);
         cryptoCuveeV2.claim(1, 0); // Claim the only Rouge bottle
         vm.expectRevert(CryptoCuveeV2.CategoryFullyMinted.selector);
         cryptoCuveeV2.claim(1, 0); // Try to claim another Rouge bottle
+
         vm.stopPrank();
     }
 
     /// @notice Ensures claiming fails when attempting to exceed max quantity
     function testRevertClaimMaxQuantityReached() public {
-        vm.startPrank(deployer);
+        vm.startPrank(domainWallet);
         vm.expectRevert(CryptoCuveeV2.MaxQuantityReached.selector);
         cryptoCuveeV2.claim(4, 0); // Try to claim 4 bottles (max is 3)
         vm.stopPrank();
@@ -503,7 +515,7 @@ contract CryptoCuveeV2Test is Test {
 
     /// @notice Ensures claiming with zero quantity fails
     function testRevertClaimZeroQuantity() public {
-        vm.startPrank(deployer);
+        vm.startPrank(domainWallet);
         vm.expectRevert(CryptoCuveeV2.QuantityMustBeGreaterThanZero.selector);
         cryptoCuveeV2.claim(0, 0);
         vm.stopPrank();
@@ -511,7 +523,7 @@ contract CryptoCuveeV2Test is Test {
 
     /// @notice Ensures claiming with invalid category fails
     function testRevertClaimInvalidCategory() public {
-        vm.startPrank(deployer);
+        vm.startPrank(domainWallet);
         vm.expectRevert(CryptoCuveeV2.InvalidCategory.selector);
         cryptoCuveeV2.claim(1, 99); // Try to claim from non-existent category
         vm.stopPrank();
