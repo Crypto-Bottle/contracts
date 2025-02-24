@@ -41,9 +41,6 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
     error InvalidTokenQuantity();
     error InvalidTokenAddress();
     error InvalidNFTBoxAddress();
-    error InvalidAddress();
-    error UserAlreadyHasBalance();
-    error ContractHasNoFunds();
     error WithdrawFailed();
 
     /**
