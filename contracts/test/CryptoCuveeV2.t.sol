@@ -458,6 +458,129 @@ contract CryptoCuveeV2Test is Test {
         assertTrue(keccak256(abi.encodePacked(newUri)) == keccak256(abi.encodePacked("https://test2.com/1")));
     }
 
+    /// @notice Tests fund wallet functionality when minting
+    function testFundWalletOnMint() public {
+        // Set fund wallet amount by admin
+        vm.startPrank(deployer);
+        cryptoCuveeV2.setFundWalletAmount(0.1 ether);
+
+        // Send ETH to contract
+        vm.deal(deployer, 0.1 ether);
+        (bool success,) = address(cryptoCuveeV2).call{value: 0.1 ether}("");
+        assertTrue(success);
+        vm.stopPrank();
+
+        // Create new user with zero balance
+        address web2User = makeAddr("web2User");
+        assertEq(web2User.balance, 0);
+
+        // Mint as system wallet for the Web2 user
+        vm.startPrank(systemWallet);
+        // Verify event was emitted
+        vm.expectEmit(true, true, true, true);
+        emit CryptoCuveeV2.WalletFunded(web2User, 0.1 ether);
+        cryptoCuveeV2.mint(web2User, 1, 0); // Mint Rouge bottle
+        vm.stopPrank();
+
+        // Verify user received the fund amount
+        assertEq(web2User.balance, 0.1 ether);
+        // Verify contract has updated balance
+        assertEq(address(cryptoCuveeV2).balance, 0 ether);
+    }
+
+    /// @notice Tests fund wallet functionality when minting
+    function testFundWalletOnMintWithEmptySmartContract() public {
+        // Set fund wallet amount by admin
+        vm.startPrank(deployer);
+        cryptoCuveeV2.setFundWalletAmount(0.1 ether);
+
+        // Create new user with zero balance
+        address web2User = makeAddr("web2User");
+        assertEq(web2User.balance, 0);
+
+        // Mint as system wallet for the Web 2 user
+        vm.startPrank(systemWallet);
+        cryptoCuveeV2.mint(web2User, 1, 0); // Mint Rouge bottle
+        vm.stopPrank();
+
+        // Verify user received the fund amount
+        assertEq(web2User.balance, 0 ether);
+        // Verify contract has updated balance
+        assertEq(address(cryptoCuveeV2).balance, 0 ether);
+    }
+
+    /// @notice Tests withdrawing ETH from the contract
+    function testWithdrawETH() public {
+        // Send ETH to contract first
+        vm.startPrank(deployer);
+        vm.deal(deployer, 1 ether);
+        (bool success,) = address(cryptoCuveeV2).call{value: 1 ether}("");
+        assertTrue(success);
+
+        // Record initial balances
+        uint256 initialContractBalance = address(cryptoCuveeV2).balance;
+        uint256 initialDeployerBalance = deployer.balance;
+
+        // Withdraw ETH
+        cryptoCuveeV2.withdrawETH();
+        vm.stopPrank();
+
+        // Verify balances after withdrawal
+        assertEq(address(cryptoCuveeV2).balance, 0);
+        assertEq(deployer.balance, initialDeployerBalance + initialContractBalance);
+    }
+
+    /// @notice Tests that non-admin cannot set fund wallet amount
+    function testRevertSetFundWalletAmountNonAdmin() public {
+        vm.startPrank(user1);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                address(user1),
+                cryptoCuveeV2.DEFAULT_ADMIN_ROLE()
+            )
+        );
+        cryptoCuveeV2.setFundWalletAmount(0.1 ether);
+        vm.stopPrank();
+    }
+
+    /// @notice Tests that non-admin cannot withdraw ETH
+    function testRevertWithdrawETHNonAdmin() public {
+        // Send ETH to contract first
+        vm.startPrank(deployer);
+        vm.deal(deployer, 1 ether);
+        (bool success,) = address(cryptoCuveeV2).call{value: 1 ether}("");
+        assertTrue(success);
+        vm.stopPrank();
+
+        // Try to withdraw as non-admin
+        vm.startPrank(user1);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, user1, cryptoCuveeV2.DEFAULT_ADMIN_ROLE()
+            )
+        );
+        cryptoCuveeV2.withdrawETH();
+        vm.stopPrank();
+
+        // Verify contract balance remains unchanged
+        assertEq(address(cryptoCuveeV2).balance, 1 ether);
+    }
+
+    /// @notice Tests that non-admin cannot withdraw ETH
+    function testRevertWithdrawETHUnauthorized() public {
+        vm.startPrank(user1);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                address(user1),
+                cryptoCuveeV2.DEFAULT_ADMIN_ROLE()
+            )
+        );
+        cryptoCuveeV2.withdrawETH();
+        vm.stopPrank();
+    }
+
     /// @notice Ensures unauthorized accounts cannot set base URI
     function testRevertSetBaseURIUnauthorized() public {
         vm.startPrank(user1);

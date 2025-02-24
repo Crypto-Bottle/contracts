@@ -41,6 +41,10 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
     error InvalidTokenQuantity();
     error InvalidTokenAddress();
     error InvalidNFTBoxAddress();
+    error InvalidAddress();
+    error UserAlreadyHasBalance();
+    error ContractHasNoFunds();
+    error WithdrawFailed();
 
     /**
      * @dev The next mintable token ID
@@ -114,6 +118,21 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
     bool private _allTokensWithdrawn;
 
     /**
+     * @dev Track if bottles have been filled
+     */
+    bool public bottlesFilled;
+
+    /**
+     * @dev NFT Box Collection address that receives 10% of opened bottle tokens
+     */
+    address public nftBoxCollectionAddress;
+
+    /**
+     * @dev Amount to send to eligible users (with zero balance)
+     */
+    uint256 public fundWalletAmount;
+
+    /**
      * @dev Max quantity mintable per transaction
      */
     uint256 public maxQuantityMintable;
@@ -174,14 +193,14 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
     event MaxQuantityMintableUpdated(uint256 newMaxQuantity);
 
     /**
-     * @dev Track if bottles have been filled
+     * @dev Fund wallet amount updated event
      */
-    bool public bottlesFilled;
+    event FundWalletAmountUpdated(uint256 oldAmount, uint256 newAmount);
 
     /**
-     * @dev NFT Box Collection address that receives 10% of opened bottle tokens
+     * @dev Fund wallet sent event
      */
-    address public nftBoxCollectionAddress;
+    event WalletFunded(address indexed to, uint256 amount);
 
     /**
      * @notice Initializes the CryptoBottle contract with category configurations and administrative settings
@@ -323,6 +342,7 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
         for (uint32 i = 0; i < _quantity; i++) {
             _safeMint(_to, tokenIds[i]);
             emit CryptoBottleMinted(_to, tokenIds[i], _categoryId);
+            _fundWallet(payable(_to));
         }
     }
 
@@ -364,6 +384,16 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
     }
 
     /**
+     * @dev Set the amount to send to eligible users (with no balance)
+     * @param _amount New amount to send
+     */
+    function setFundWalletAmount(uint256 _amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        uint256 oldAmount = fundWalletAmount;
+        fundWalletAmount = _amount;
+        emit FundWalletAmountUpdated(oldAmount, _amount);
+    }
+
+    /**
      * @notice Allows bottle owner to claim the underlying tokens
      * @dev Transfers 90% of tokens to owner and 10% to NFT Box Collection address
      * @param _tokenId ID of the bottle to open
@@ -382,13 +412,6 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
             _openBottle(tokenIds[i]);
             ++i;
         }
-    }
-
-    /**
-     * @dev Whitdraw the stable coin from the contract
-     */
-    function withdrawStableCoin() external nonReentrant onlyRole(DEFAULT_ADMIN_ROLE) {
-        SafeERC20.safeTransfer(stableCoin, _msgSender(), stableCoin.balanceOf(address(this)));
     }
 
     /**
@@ -411,6 +434,19 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
             revert AllTokensWithdrawn();
         }
         mintClosed = !mintClosed;
+    }
+
+    /**
+     * @dev Whitdraw the stable coin from the contract
+     */
+    function withdrawStableCoin() external nonReentrant onlyRole(DEFAULT_ADMIN_ROLE) {
+        SafeERC20.safeTransfer(stableCoin, _msgSender(), stableCoin.balanceOf(address(this)));
+    }
+
+    // Fx to withdraw ETH from the contract
+    function withdrawETH() external nonReentrant onlyRole(DEFAULT_ADMIN_ROLE) {
+        (bool success,) = _msgSender().call{value: address(this).balance}("");
+        if (!success) revert WithdrawFailed();
     }
 
     /**
@@ -530,6 +566,20 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
         emit CryptoBottleOpened(_msgSender(), _tokenId);
     }
 
+    // Internal function to send native token to eligible users (with zero balance) if possible
+    function _fundWallet(address payable _user) internal {
+        if (
+            fundWalletAmount > 0 && address(this).balance >= fundWalletAmount && _user.balance == 0
+                && _user != address(0)
+        ) {
+            // Sending native token to the user
+            (bool success,) = _user.call{value: fundWalletAmount}("");
+            if (success) {
+                emit WalletFunded(_user, fundWalletAmount);
+            }
+        }
+    }
+
     /**
      * @dev Override _update function from ERC721
      * @param to The address to mint to
@@ -557,4 +607,7 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
     function _baseURI() internal view override returns (string memory) {
         return _uri;
     }
+
+    /// @notice Allows the contract to receive ETH
+    receive() external payable {}
 }
