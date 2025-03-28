@@ -30,6 +30,7 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
     error NotOwnerBottle(uint256 tokenId);
     error AllTokensWithdrawn();
     error BottlesAlreadyFilled();
+    error BottlesNotFilled();
     error InvalidCategory();
     error InvalidStableCoinAddress();
     error InvalidSystemWallet();
@@ -165,6 +166,11 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
     mapping(uint256 => bool) public openedBottles;
 
     /**
+     * @dev Track total stable coin spent during mints
+     */
+    uint256 private _totalStableCoinSpent;
+
+    /**
      * @dev CryptoBottle's opened event
      */
     event CryptoBottleOpened(address indexed to, uint256 indexed tokenId);
@@ -198,6 +204,36 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
      * @dev Fund wallet sent event
      */
     event WalletFunded(address indexed to, uint256 amount);
+
+    /**
+     * @dev Bottles filled event
+     */
+    event BottlesFilled();
+
+    /**
+     * @dev Change mint status event
+     */
+    event ChangeMintStatus(bool newMintStatus);
+
+    /**
+     * @dev Default royalty set event
+     */
+    event DefaultRoyaltySet(address indexed receiver, uint96 feeNumerator);
+
+    /**
+     * @dev Base URI updated event
+     */
+    event BaseURIUpdated(string uri_);
+
+    /**
+     * @dev Withdraw stable coin event
+     */
+    event StableCoinWithdrawn(uint256 amount);
+
+    /**
+     * @dev ETH withdrawn event
+     */
+    event ETHWithdrawn(uint256 amount);
 
     /**
      * @notice Initializes the CryptoBottle contract with category configurations and administrative settings
@@ -248,7 +284,6 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
 
             newCategory.price = _prices[i];
             newCategory.totalBottles = _totalBottles[i];
-            newCategory.mintedBottles = 0;
 
             // Copy tokens and track unique addresses
             for (uint256 j = 0; j < _categoryTokens[i].length; j++) {
@@ -262,7 +297,6 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
                 if (!_tokenAddressExists[memToken.tokenAddress]) {
                     _uniqueERC20TokenAddresses.push(memToken.tokenAddress);
                     _tokenAddressExists[memToken.tokenAddress] = true;
-                    totalTokenQuantity[memToken.tokenAddress] = 0;
                 }
                 totalTokenQuantity[memToken.tokenAddress] += memToken.quantity * _totalBottles[i];
             }
@@ -273,13 +307,11 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
     }
 
     /**
-     * @notice Transfers initial token quantities to the contract and enables mint
+     * @notice Transfers initial token quantities to the contract
      * @dev Can only be called once by admin. Requires admin to have approved sufficient token amounts
      */
     function fillBottles() external onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (bottlesFilled) {
-            revert BottlesAlreadyFilled();
-        }
+        if (bottlesFilled) revert BottlesAlreadyFilled();
 
         for (uint256 i = 0; i < _uniqueERC20TokenAddresses.length; i++) {
             address tokenAddress = _uniqueERC20TokenAddresses[i];
@@ -287,6 +319,7 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
             if (tokenBalance < totalTokenQuantity[tokenAddress]) {
                 revert InsufficientTokenBalance(tokenAddress, tokenBalance);
             }
+
             // Transfer the tokens to the contract
             SafeERC20.safeTransferFrom(
                 IERC20(tokenAddress), _msgSender(), address(this), totalTokenQuantity[tokenAddress]
@@ -294,6 +327,7 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
         }
 
         bottlesFilled = true;
+        emit BottlesFilled();
     }
 
     /**
@@ -305,42 +339,31 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
      */
     function mint(address _to, uint32 _quantity, uint256 _categoryId) external nonReentrant {
         if (_categoryId >= categories.length) revert InvalidCategory();
-        if (mintClosed) {
-            revert MintClosed();
-        }
-
-        if (_quantity == 0) {
-            revert QuantityMustBeGreaterThanZero();
-        }
-
-        if (_quantity > maxQuantityMintable) {
-            revert MaxQuantityReached();
-        }
+        if (mintClosed) revert MintClosed();
+        if (_quantity == 0) revert QuantityMustBeGreaterThanZero();
+        if (_quantity > maxQuantityMintable) revert MaxQuantityReached();
 
         Category storage category = categories[_categoryId];
-        if (category.mintedBottles + _quantity > category.totalBottles) {
-            revert CategoryFullyMinted();
-        }
-
-        // Update state
-        uint256[] memory tokenIds = new uint256[](_quantity);
-        for (uint32 i = 0; i < _quantity; i++) {
-            tokenIds[i] = _nextTokenId++;
-            bottleToCategory[tokenIds[i]] = _categoryId;
-            category.mintedBottles++;
-        }
+        if (category.mintedBottles + _quantity > category.totalBottles) revert CategoryFullyMinted();
 
         // Handle stable coin payment if not system wallet
         if (!hasRole(SYSTEM_WALLET_ROLE, _msgSender())) {
-            SafeERC20.safeTransferFrom(stableCoin, _msgSender(), address(this), category.price * _quantity);
+            uint256 stableCoinAmount = category.price * _quantity;
+            SafeERC20.safeTransferFrom(stableCoin, _msgSender(), address(this), stableCoinAmount);
+            _totalStableCoinSpent += stableCoinAmount;
         }
 
         // Mint tokens
         for (uint32 i = 0; i < _quantity; i++) {
-            _safeMint(_to, tokenIds[i]);
-            emit CryptoBottleMinted(_to, tokenIds[i], _categoryId);
-            _fundWallet(payable(_to));
+            uint256 tokenId = _nextTokenId++;
+            bottleToCategory[tokenId] = _categoryId;
+            category.mintedBottles++;
+            _safeMint(_to, tokenId);
+            emit CryptoBottleMinted(_to, tokenId, _categoryId);
         }
+
+        // Fund wallet if user has no balance
+        _fundWallet(payable(_to));
     }
 
     /**
@@ -349,34 +372,20 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
      * @param _categoryId Category index of bottles to mint
      */
     function claim(uint32 _quantity, uint256 _categoryId) external nonReentrant onlyRole(DOMAIN_WALLET_ROLE) {
-        address _to = msg.sender;
         if (_categoryId >= categories.length) revert InvalidCategory();
-
-        if (_quantity == 0) {
-            revert QuantityMustBeGreaterThanZero();
-        }
-
-        if (_quantity > maxQuantityMintable) {
-            revert MaxQuantityReached();
-        }
+        if (_quantity == 0) revert QuantityMustBeGreaterThanZero();
+        if (_quantity > maxQuantityMintable) revert MaxQuantityReached();
 
         Category storage category = categories[_categoryId];
-        if (category.mintedBottles + _quantity > category.totalBottles) {
-            revert CategoryFullyMinted();
-        }
+        if (category.mintedBottles + _quantity > category.totalBottles) revert CategoryFullyMinted();
 
-        // Update state
-        uint256[] memory tokenIds = new uint256[](_quantity);
+        // Mint tokens
         for (uint32 i = 0; i < _quantity; i++) {
-            tokenIds[i] = _nextTokenId++;
-            bottleToCategory[tokenIds[i]] = _categoryId;
+            uint256 tokenId = _nextTokenId++;
+            bottleToCategory[tokenId] = _categoryId;
             category.mintedBottles++;
-        }
-
-        // Claim tokens
-        for (uint32 i = 0; i < _quantity; i++) {
-            _safeMint(_to, tokenIds[i]);
-            emit CryptoBottleMinted(_to, tokenIds[i], _categoryId);
+            _safeMint(msg.sender, tokenId);
+            emit CryptoBottleMinted(msg.sender, tokenId, _categoryId);
         }
     }
 
@@ -427,23 +436,27 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
         if (!hasRole(DEFAULT_ADMIN_ROLE, _msgSender()) && !hasRole(DOMAIN_WALLET_ROLE, _msgSender())) {
             revert AccessControlUnauthorizedAccount(_msgSender(), DEFAULT_ADMIN_ROLE);
         }
-        if (_allTokensWithdrawn) {
-            revert AllTokensWithdrawn();
-        }
+        if (!bottlesFilled) revert BottlesNotFilled();
+        if (_allTokensWithdrawn) revert AllTokensWithdrawn();
         mintClosed = !mintClosed;
+        emit ChangeMintStatus(mintClosed);
     }
 
     /**
-     * @dev Whitdraw the stable coin from the contract
+     * @dev Withdraw the stable coin from the contract, only the amount spent during mints
      */
     function withdrawStableCoin() external nonReentrant onlyRole(DEFAULT_ADMIN_ROLE) {
-        SafeERC20.safeTransfer(stableCoin, _msgSender(), stableCoin.balanceOf(address(this)));
+        uint256 withdrawAmount = _totalStableCoinSpent;
+        _totalStableCoinSpent = 0;
+        SafeERC20.safeTransfer(stableCoin, _msgSender(), withdrawAmount);
+        emit StableCoinWithdrawn(withdrawAmount);
     }
 
     // Fx to withdraw ETH from the contract
     function withdrawETH() external nonReentrant onlyRole(DEFAULT_ADMIN_ROLE) {
         (bool success,) = _msgSender().call{value: address(this).balance}("");
         if (!success) revert WithdrawFailed();
+        emit ETHWithdrawn(address(this).balance);
     }
 
     /**
@@ -473,9 +486,7 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
         for (uint256 i = 0; i < _uniqueERC20TokenAddresses.length; i++) {
             address tokenAddress = _uniqueERC20TokenAddresses[i];
             uint256 amount = _withdrawAmountsERC20[tokenAddress];
-            if (amount > 0) {
-                SafeERC20.safeTransfer(IERC20(tokenAddress), _msgSender(), amount);
-            }
+            if (amount > 0) SafeERC20.safeTransfer(IERC20(tokenAddress), _msgSender(), amount);
         }
 
         _allTokensWithdrawn = true;
@@ -488,6 +499,7 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
      */
     function setDefaultRoyalty(address _receiver, uint96 _feeNumerator) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _setDefaultRoyalty(_receiver, _feeNumerator);
+        emit DefaultRoyaltySet(_receiver, _feeNumerator);
     }
 
     /**
@@ -507,6 +519,7 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
      */
     function setBaseURI(string memory uri_) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _uri = uri_;
+        emit BaseURIUpdated(uri_);
     }
 
     /**
@@ -515,9 +528,7 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
      * @return tokens The array of Token structs
      */
     function getCryptoBottleTokens(uint256 tokenId) external view returns (Token[] memory) {
-        if (ownerOf(tokenId) == address(0)) {
-            revert ERC721NonexistentToken(tokenId);
-        }
+        if (ownerOf(tokenId) == address(0)) revert ERC721NonexistentToken(tokenId);
 
         uint256 categoryId = bottleToCategory[tokenId];
         return categories[categoryId].tokens;
@@ -538,13 +549,9 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
 
     // Internal function to handle the bottle opening logic
     function _openBottle(uint256 _tokenId) internal {
-        if (ownerOf(_tokenId) != _msgSender()) {
-            revert NotOwnerBottle(_tokenId);
-        }
+        if (ownerOf(_tokenId) != _msgSender()) revert NotOwnerBottle(_tokenId);
 
-        if (openedBottles[_tokenId]) {
-            revert BottleAlreadyOpened(_tokenId);
-        }
+        if (openedBottles[_tokenId]) revert BottleAlreadyOpened(_tokenId);
 
         uint256 categoryId = bottleToCategory[_tokenId];
         Category storage category = categories[categoryId];
@@ -571,9 +578,7 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
         ) {
             // Sending native token to the user
             (bool success,) = _user.call{value: fundWalletAmount}("");
-            if (success) {
-                emit WalletFunded(_user, fundWalletAmount);
-            }
+            if (success) emit WalletFunded(_user, fundWalletAmount);
         }
     }
 

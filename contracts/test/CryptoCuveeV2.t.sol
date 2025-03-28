@@ -381,6 +381,53 @@ contract CryptoCuveeV2Test is Test {
         vm.stopPrank();
     }
 
+    /// @notice Verifies that mint status cannot be changed before bottles are filled
+    function testRevertChangeMintStatusBeforeFillBottles() public {
+        // Deploy a new instance without filling bottles
+        uint256[] memory prices = new uint256[](4);
+        prices[0] = 10 ether;
+        prices[1] = 0;
+        prices[2] = 0;
+        prices[3] = 5 ether;
+
+        uint256[] memory totalBottles = new uint256[](4);
+        totalBottles[0] = 1;
+        totalBottles[1] = 0;
+        totalBottles[2] = 0;
+        totalBottles[3] = 1;
+
+        CryptoCuveeV2.Token[][] memory categoryTokens = new CryptoCuveeV2.Token[][](4);
+        categoryTokens[0] = new CryptoCuveeV2.Token[](2);
+        categoryTokens[0][0] =
+            CryptoCuveeV2.Token({name: "mBTC", tokenAddress: address(mockBTC), quantity: ROUGE_BTC_QUANTITY});
+        categoryTokens[0][1] =
+            CryptoCuveeV2.Token({name: "mETH", tokenAddress: address(mockETH), quantity: ROUGE_ETH_QUANTITY});
+        categoryTokens[1] = new CryptoCuveeV2.Token[](0);
+        categoryTokens[2] = new CryptoCuveeV2.Token[](0);
+        categoryTokens[3] = new CryptoCuveeV2.Token[](2);
+        categoryTokens[3][0] =
+            CryptoCuveeV2.Token({name: "mBTC", tokenAddress: address(mockBTC), quantity: CHAMPAGNE_BTC_QUANTITY});
+        categoryTokens[3][1] =
+            CryptoCuveeV2.Token({name: "mETH", tokenAddress: address(mockETH), quantity: CHAMPAGNE_ETH_QUANTITY});
+
+        CryptoCuveeV2 newCryptoCuvee = new CryptoCuveeV2(
+            mockStableCoin,
+            prices,
+            totalBottles,
+            categoryTokens,
+            "https://test.com/",
+            systemWallet,
+            domainWallet,
+            deployer
+        );
+
+        // Try to change mint status before filling bottles
+        vm.startPrank(deployer);
+        vm.expectRevert(abi.encodeWithSelector(CryptoCuveeV2.BottlesNotFilled.selector));
+        newCryptoCuvee.changeMintStatus();
+        vm.stopPrank();
+    }
+
     /// @notice Tests correct token URI generation
     function testTokenURI() public {
         vm.startPrank(user1);
@@ -650,5 +697,108 @@ contract CryptoCuveeV2Test is Test {
         vm.expectRevert(CryptoCuveeV2.InvalidCategory.selector);
         cryptoCuveeV2.claim(1, 99); // Try to claim from non-existent category
         vm.stopPrank();
+    }
+
+    /// @notice Tests that stablecoin withdrawal only returns amount spent during mints
+    function testWithdrawOnlySpentStableCoin() public {
+        // Mint some stable coins to user1
+        vm.startPrank(user1);
+        mockStableCoin.mint(user1, 100 ether);
+        mockStableCoin.approve(address(cryptoCuveeV2), 100 ether);
+
+        // Mint a Rouge bottle (costs 10 ether)
+        cryptoCuveeV2.mint(user1, 1, 0);
+        vm.stopPrank();
+
+        // Send additional stablecoins directly to contract (simulating filling bottles)
+        mockStableCoin.mint(address(cryptoCuveeV2), 5 ether);
+
+        // Record admin's initial balance
+        uint256 initialAdminBalance = mockStableCoin.balanceOf(deployer);
+
+        // Withdraw as admin
+        vm.startPrank(deployer);
+        cryptoCuveeV2.withdrawStableCoin();
+        vm.stopPrank();
+
+        // Verify admin only received the amount spent during minting (10 ether)
+        assertEq(
+            mockStableCoin.balanceOf(deployer) - initialAdminBalance,
+            10 ether,
+            "Admin should only receive amount spent during mints"
+        );
+
+        // Verify contract still has the amount from the fillBottles function
+        assertEq(
+            mockStableCoin.balanceOf(address(cryptoCuveeV2)), 5 ether, "Contract should retain non-mint stablecoins"
+        );
+    }
+
+    /// @notice Tests that multiple mints correctly track total spent stablecoin
+    function testMultipleMintStableCoinTracking() public {
+        // Mint some stable coins to users
+        mockStableCoin.mint(user1, 100 ether);
+        mockStableCoin.mint(user2, 100 ether);
+
+        // User1 mints Rouge bottle (10 ether)
+        vm.startPrank(user1);
+        mockStableCoin.approve(address(cryptoCuveeV2), 100 ether);
+        cryptoCuveeV2.mint(user1, 1, 0);
+        vm.stopPrank();
+
+        // User2 mints Champagne bottle (5 ether)
+        vm.startPrank(user2);
+        mockStableCoin.approve(address(cryptoCuveeV2), 100 ether);
+        cryptoCuveeV2.mint(user2, 1, 3);
+        vm.stopPrank();
+
+        // Record admin's initial balance
+        uint256 initialAdminBalance = mockStableCoin.balanceOf(deployer);
+
+        // Withdraw as admin
+        vm.startPrank(deployer);
+        cryptoCuveeV2.withdrawStableCoin();
+        vm.stopPrank();
+
+        // Verify admin received total amount spent (15 ether)
+        assertEq(
+            mockStableCoin.balanceOf(deployer) - initialAdminBalance,
+            15 ether,
+            "Admin should receive total amount spent in mints"
+        );
+
+        // Verify contract has no more withdrawable stablecoins
+        vm.startPrank(deployer);
+        cryptoCuveeV2.withdrawStableCoin();
+        vm.stopPrank();
+
+        assertEq(
+            mockStableCoin.balanceOf(deployer) - initialAdminBalance,
+            15 ether,
+            "Second withdrawal should not transfer any additional tokens"
+        );
+    }
+
+    /// @notice Tests that system wallet mints don't affect stablecoin tracking
+    function testSystemWalletMintNoStableCoinTracking() public {
+        // System wallet mints
+        vm.startPrank(systemWallet);
+        cryptoCuveeV2.mint(user1, 1, 0); // Rouge bottle (would normally cost 10 ether)
+        vm.stopPrank();
+
+        // Record admin's initial balance
+        uint256 initialAdminBalance = mockStableCoin.balanceOf(deployer);
+
+        // Withdraw as admin
+        vm.startPrank(deployer);
+        cryptoCuveeV2.withdrawStableCoin();
+        vm.stopPrank();
+
+        // Verify no stablecoins were tracked or withdrawn
+        assertEq(
+            mockStableCoin.balanceOf(deployer),
+            initialAdminBalance,
+            "System wallet mints should not affect stablecoin tracking"
+        );
     }
 }
