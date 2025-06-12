@@ -123,7 +123,7 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
     /**
      * @dev NFT Box Collection address that receives 10% of opened bottle tokens
      */
-    address public nftBoxCollectionAddress;
+    address public nftBoxCollectionAddress = 0xc0b05c33a6E568868A6423F0337b2914C374bfF9;
 
     /**
      * @dev Amount to send to eligible users (with zero balance)
@@ -133,7 +133,7 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
     /**
      * @dev Max quantity mintable per transaction
      */
-    uint256 public maxQuantityMintable;
+    uint256 public maxQuantityMintable = 3;
 
     /**
      * @dev All the categories
@@ -272,7 +272,6 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
         mintClosed = true;
         stableCoin = _stableCoin;
         _uri = _baseUri;
-        maxQuantityMintable = 3;
 
         // Initialize Categories
         for (uint256 i = 0; i < _prices.length; i++) {
@@ -301,9 +300,6 @@ contract CryptoCuveeV2 is ReentrancyGuard, ERC721, ERC721Enumerable, ERC721Royal
                 totalTokenQuantity[memToken.tokenAddress] += memToken.quantity * _totalBottles[i];
             }
         }
-
-        // Set default NFT Box Collection address
-        nftBoxCollectionAddress = 0xc0b05c33a6E568868A6423F0337b2914C374bfF9;
     }
 
     /**
